@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Bot War Arena - Vercel Game</title>
+  <title>Bot War Arena + Leaderboard</title>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       user-select: none;
+      -webkit-user-select: none;
     }
     body {
       background: #090d16;
@@ -18,25 +19,21 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       min-height: 100vh;
-      overflow: hidden;
+      padding: 15px 0;
     }
     h1 {
-      margin-bottom: 5px;
+      margin-bottom: 4px;
       color: #ef4444;
-      font-size: 24px;
+      font-size: 22px;
       text-transform: uppercase;
       letter-spacing: 2px;
     }
     .score-board {
-      font-size: 16px;
-      margin-bottom: 10px;
+      font-size: 14px;
+      margin-bottom: 8px;
       color: #cbd5e1;
-    }
-    .score-board span {
-      color: #22c55e;
-      font-weight: bold;
     }
     #game-container {
       position: relative;
@@ -56,15 +53,29 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(15, 23, 42, 0.9);
+      background: rgba(15, 23, 42, 0.92);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      z-index: 10;
+      padding: 20px;
+    }
+    input[type="text"] {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #fff;
+      font-size: 15px;
+      text-align: center;
+      margin-bottom: 12px;
+      width: 80%;
+      outline: none;
     }
     #start-btn {
       padding: 12px 28px;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       color: #fff;
       background: #ef4444;
@@ -76,69 +87,123 @@
     #start-btn:active {
       transform: scale(0.95);
     }
-    /* Controls HP */
-    .mobile-controls {
+
+    /* Area Kontrol Joystick */
+    .controls-wrapper {
+      width: 340px;
       display: flex;
-      gap: 15px;
+      justify-content: space-between;
+      align-items: center;
       margin-top: 10px;
     }
-    .d-pad {
-      display: grid;
-      grid-template-columns: repeat(3, 45px);
-      grid-template-rows: repeat(2, 45px);
-      gap: 4px;
+    #joystick-container {
+      width: 90px;
+      height: 90px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      position: relative;
+      touch-action: none;
     }
-    .btn {
-      background: #1e293b;
-      color: #fff;
-      border: 1px solid #475569;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
+    #joystick-stick {
+      width: 36px;
+      height: 36px;
+      background: #38bdf8;
+      border-radius: 50%;
+      position: absolute;
+      top: 25px;
+      left: 25px;
     }
-    .btn:active {
-      background: #334155;
+    .action-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
     .btn-shoot {
-      width: 90px;
-      height: 94px;
+      width: 95px;
+      height: 45px;
       background: #dc2626;
-      border-color: #ef4444;
+      border: 2px solid #ef4444;
       color: white;
+      font-weight: bold;
       font-size: 14px;
-      border-radius: 12px;
+      border-radius: 8px;
     }
-    .btn-shoot:active {
-      background: #b91c1c;
+    .toggle-auto {
+      background: #334155;
+      color: #cbd5e1;
+      border: 1px solid #475569;
+      padding: 5px;
+      font-size: 11px;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    /* Tampilan Leaderboard Box */
+    .leaderboard-box {
+      width: 340px;
+      margin-top: 15px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .leaderboard-title {
+      font-size: 15px;
+      color: #facc15;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    ol {
+      padding-left: 20px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+    .no-data {
+      color: #64748b;
+      font-size: 12px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
   <h1>WAR ARENA vs BOTS 🔫</h1>
-  <div class="score-board">Kill: <span id="kills">0</span> | HP Kamu: <span id="hp" style="color:#ef4444;">100</span></div>
+  <div class="score-board">Kill: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | HP: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span></div>
 
   <div id="game-container">
-    <canvas id="canvas" width="340" height="360"></canvas>
+    <canvas id="canvas" width="340" height="320"></canvas>
     
     <div id="overlay">
-      <h2 id="msg-title" style="margin-bottom: 15px; color: #ef4444;">BATTLE START</h2>
+      <h2 id="msg-title" style="margin-bottom: 10px; color: #ef4444;">BATTLE ARENA</h2>
+      <input type="text" id="player-name" placeholder="Masukkan Nickname Kamu..." maxlength="12">
       <button id="start-btn" onclick="startGame()">MULAI PERANG 💣</button>
     </div>
   </div>
 
-  <!-- Kontrol Khusus HP -->
-  <div class="mobile-controls">
-    <div class="d-pad">
-      <div></div>
-      <button class="btn" onmousedown="startMove('UP')" onmouseup="stopMove()" ontouchstart="startMove('UP')" ontouchend="stopMove()">▲</button>
-      <div></div>
-      <button class="btn" onmousedown="startMove('LEFT')" onmouseup="stopMove()" ontouchstart="startMove('LEFT')" ontouchend="stopMove()">◄</button>
-      <button class="btn" onmousedown="startMove('DOWN')" onmouseup="stopMove()" ontouchstart="startMove('DOWN')" ontouchend="stopMove()">▼</button>
-      <button class="btn" onmousedown="startMove('RIGHT')" onmouseup="stopMove()" ontouchstart="startMove('RIGHT')" ontouchend="stopMove()">►</button>
+  <!-- Area Joystick & Action -->
+  <div class="controls-wrapper">
+    <div id="joystick-container">
+      <div id="joystick-stick"></div>
     </div>
-    <button class="btn btn-shoot" onclick="playerShoot()">TEMBAK 💥</button>
+
+    <div class="action-group">
+      <button class="btn-shoot" onclick="playerShoot()">TEMBAK 💥</button>
+      <button id="auto-btn" class="toggle-auto" onclick="toggleAutoShoot()">Auto Shoot: OFF</button>
+    </div>
+  </div>
+
+  <!-- Papan Leaderboard -->
+  <div class="leaderboard-box">
+    <div class="leaderboard-title">🏆 LEADERBOARD TOP KILL</div>
+    <ol id="leaderboard-list">
+      <p class="no-data">Belum ada skor tercatat. Jadilah pemenang pertama!</p>
+    </ol>
   </div>
 
   <script>
@@ -149,30 +214,109 @@
     const overlay = document.getElementById("overlay");
     const startBtn = document.getElementById("start-btn");
     const msgTitle = document.getElementById("msg-title");
+    const autoBtn = document.getElementById("auto-btn");
+    const playerNameInput = document.getElementById("player-name");
+    const leaderboardList = document.getElementById("leaderboard-list");
 
-    let player, bullets, botBullets, bots, kills, isPlaying, gameLoopId, botSpawner;
+    let player, bullets, botBullets, bots, kills, isPlaying, gameLoopId, botSpawner, autoShootInterval;
     let keys = {};
-    let lastMoveDir = { x: 0, y: -1 }; // Arah awal nembak ke atas
+    let lastMoveDir = { x: 0, y: -1 };
+    let joystickDir = { x: 0, y: 0 };
+    let autoShoot = false;
+    let playerName = "Player";
 
-    // Handle Keyboard
+    // --- LOGIKA LEADERBOARD ---
+    function loadLeaderboard() {
+      const scores = JSON.parse(localStorage.getItem("war_leaderboard") || "[]");
+      leaderboardList.innerHTML = "";
+
+      if (scores.length === 0) {
+        leaderboardList.innerHTML = `<p class="no-data">Belum ada skor tercatat.</p>`;
+        return;
+      }
+
+      scores.forEach((item) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
+        leaderboardList.appendChild(li);
+      });
+    }
+
+    function saveScore(name, killCount) {
+      if(killCount === 0) return; // Jangan simpan kalau 0 kill
+      let scores = JSON.parse(localStorage.getItem("war_leaderboard") || "[]");
+      
+      scores.push({ name: name, kills: killCount });
+      // Sortir dari Kill paling banyak
+      scores.sort((a, b) => b.kills - a.kills);
+      // Ambil Top 5 saja
+      scores = scores.slice(0, 5);
+
+      localStorage.setItem("war_leaderboard", JSON.stringify(scores));
+      loadLeaderboard();
+    }
+
+    // --- JOYSTICK CONTROLLER ---
+    const joyContainer = document.getElementById("joystick-container");
+    const joyStick = document.getElementById("joystick-stick");
+    const maxRadius = 25;
+    let isDragging = false;
+
+    function handleJoyMove(clientX, clientY) {
+      const rect = joyContainer.getBoundingClientRect();
+      let dx = clientX - (rect.left + rect.width / 2);
+      let dy = clientY - (rect.top + rect.height / 2);
+      let distance = Math.hypot(dx, dy);
+
+      if (distance > maxRadius) {
+        dx = (dx / distance) * maxRadius;
+        dy = (dy / distance) * maxRadius;
+      }
+
+      joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+      joystickDir.x = dx / maxRadius;
+      joystickDir.y = dy / maxRadius;
+
+      if (Math.abs(joystickDir.x) > 0.1 || Math.abs(joystickDir.y) > 0.1) {
+        lastMoveDir = { x: joystickDir.x, y: joystickDir.y };
+      }
+    }
+
+    joyContainer.addEventListener("touchstart", (e) => {
+      isDragging = true;
+      handleJoyMove(e.touches[0].clientX, e.touches[0].clientY);
+    });
+    window.addEventListener("touchmove", (e) => {
+      if (isDragging) handleJoyMove(e.touches[0].clientX, e.touches[0].clientY);
+    });
+    window.addEventListener("touchend", () => {
+      isDragging = false;
+      joyStick.style.transform = "translate(0px, 0px)";
+      joystickDir = { x: 0, y: 0 };
+    });
+
+    // --- GAME ENGINE ---
     window.addEventListener("keydown", (e) => {
       keys[e.key] = true;
       if (e.code === "Space" && isPlaying) playerShoot();
     });
     window.addEventListener("keyup", (e) => keys[e.key] = false);
 
-    function startMove(dir) {
-      keys['ArrowUp'] = dir === 'UP';
-      keys['ArrowDown'] = dir === 'DOWN';
-      keys['ArrowLeft'] = dir === 'LEFT';
-      keys['ArrowRight'] = dir === 'RIGHT';
-    }
-    function stopMove() {
-      keys['ArrowUp'] = keys['ArrowDown'] = keys['ArrowLeft'] = keys['ArrowRight'] = false;
+    function toggleAutoShoot() {
+      autoShoot = !autoShoot;
+      autoBtn.innerText = autoShoot ? "Auto Shoot: ON 🔥" : "Auto Shoot: OFF";
+      autoBtn.style.background = autoShoot ? "#16a34a" : "#334155";
+
+      if (autoShoot) {
+        autoShootInterval = setInterval(() => { if (isPlaying) playerShoot(); }, 250);
+      } else {
+        clearInterval(autoShootInterval);
+      }
     }
 
     function startGame() {
-      player = { x: 160, y: 180, radius: 12, hp: 100, speed: 3 };
+      playerName = playerNameInput.value.trim() || "User";
+      player = { x: 170, y: 160, radius: 12, hp: 100, speed: 3 };
       bullets = [];
       botBullets = [];
       bots = [];
@@ -184,7 +328,7 @@
       overlay.style.display = "none";
 
       if (botSpawner) clearInterval(botSpawner);
-      botSpawner = setInterval(spawnBot, 2000); // Spawn bot tiap 2 detik
+      botSpawner = setInterval(spawnBot, 1800);
 
       if (gameLoopId) cancelAnimationFrame(gameLoopId);
       update();
@@ -192,32 +336,20 @@
 
     function spawnBot() {
       if (!isPlaying) return;
-      // Spawn bot dari pinggir layar acak
-      let x, y;
-      if (Math.random() < 0.5) {
-        x = Math.random() < 0.5 ? 0 : canvas.width;
-        y = Math.random() * canvas.height;
-      } else {
-        x = Math.random() * canvas.width;
-        y = Math.random() < 0.5 ? 0 : canvas.height;
-      }
+      let x = Math.random() < 0.5 ? 0 : canvas.width;
+      let y = Math.random() * canvas.height;
 
-      bots.push({
-        x: x,
-        y: y,
-        radius: 10,
-        speed: 1.2,
-        lastShoot: Date.now()
-      });
+      bots.push({ x: x, y: y, radius: 10, speed: 1.2, lastShoot: Date.now() });
     }
 
     function playerShoot() {
       if (!isPlaying) return;
+      let mag = Math.hypot(lastMoveDir.x, lastMoveDir.y) || 1;
       bullets.push({
         x: player.x,
         y: player.y,
-        dx: lastMoveDir.x * 6,
-        dy: lastMoveDir.y * 6,
+        dx: (lastMoveDir.x / mag) * 6,
+        dy: (lastMoveDir.y / mag) * 6,
         radius: 4
       });
     }
@@ -225,52 +357,43 @@
     function update() {
       if (!isPlaying) return;
 
-      // Gerak Player
-      let moveX = 0, moveY = 0;
+      let moveX = joystickDir.x;
+      let moveY = joystickDir.y;
+
       if (keys['ArrowUp'] || keys['w']) moveY = -1;
       if (keys['ArrowDown'] || keys['s']) moveY = 1;
       if (keys['ArrowLeft'] || keys['a']) moveX = -1;
       if (keys['ArrowRight'] || keys['d']) moveX = 1;
 
       if (moveX !== 0 || moveY !== 0) {
-        lastMoveDir = { x: moveX, y: moveY };
         player.x += moveX * player.speed;
         player.y += moveY * player.speed;
+        if (!isDragging) lastMoveDir = { x: moveX, y: moveY };
       }
 
-      // Batasi Tembok
       player.x = Math.max(12, Math.min(canvas.width - 12, player.x));
       player.y = Math.max(12, Math.min(canvas.height - 12, player.y));
 
-      // Update Peluru Player
       bullets.forEach((b, index) => {
         b.x += b.dx;
         b.y += b.dy;
-        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-          bullets.splice(index, 1);
-        }
+        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(index, 1);
       });
 
-      // Update Bot & Logika Bot Nembak
       bots.forEach((bot, bIndex) => {
-        // Bot jalan mendekati Player
         let angle = Math.atan2(player.y - bot.y, player.x - bot.x);
         bot.x += Math.cos(angle) * bot.speed;
         bot.y += Math.sin(angle) * bot.speed;
 
-        // Bot Nembak Otomatis tiap 1.5 detik
         if (Date.now() - bot.lastShoot > 1500) {
           botBullets.push({
-            x: bot.x,
-            y: bot.y,
-            dx: Math.cos(angle) * 4,
-            dy: Math.sin(angle) * 4,
+            x: bot.x, y: bot.y,
+            dx: Math.cos(angle) * 3.5, dy: Math.sin(angle) * 3.5,
             radius: 3
           });
           bot.lastShoot = Date.now();
         }
 
-        // Cek Peluru Player kena Bot
         bullets.forEach((b, pIndex) => {
           let dist = Math.hypot(b.x - bot.x, b.y - bot.y);
           if (dist < b.radius + bot.radius) {
@@ -282,26 +405,20 @@
         });
       });
 
-      // Update Peluru Bot
       botBullets.forEach((bb, index) => {
         bb.x += bb.dx;
         bb.y += bb.dy;
 
-        // Cek Peluru Bot kena Player
         let dist = Math.hypot(bb.x - player.x, bb.y - player.y);
         if (dist < bb.radius + player.radius) {
           player.hp -= 10;
           hpEl.innerText = player.hp;
           botBullets.splice(index, 1);
 
-          if (player.hp <= 0) {
-            gameOver();
-          }
+          if (player.hp <= 0) gameOver();
         }
 
-        if (bb.x < 0 || bb.x > canvas.width || bb.y < 0 || bb.y > canvas.height) {
-          botBullets.splice(index, 1);
-        }
+        if (bb.x < 0 || bb.x > canvas.width || bb.y < 0 || bb.y > canvas.height) botBullets.splice(index, 1);
       });
 
       draw();
@@ -311,52 +428,43 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Gambar Player (Biru)
       ctx.fillStyle = "#38bdf8";
       ctx.beginPath();
       ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Gambar Moncong Senjata
+      let mag = Math.hypot(lastMoveDir.x, lastMoveDir.y) || 1;
       ctx.strokeStyle = "#fff";
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(player.x, player.y);
-      ctx.lineTo(player.x + lastMoveDir.x * 16, player.y + lastMoveDir.y * 16);
+      ctx.lineTo(player.x + (lastMoveDir.x / mag) * 18, player.y + (lastMoveDir.y / mag) * 18);
       ctx.stroke();
 
-      // Gambar Peluru Player (Kuning)
       ctx.fillStyle = "#facc15";
-      bullets.forEach(b => {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2); ctx.fill(); });
 
-      // Gambar Bot (Merah)
       ctx.fillStyle = "#ef4444";
-      bots.forEach(bot => {
-        ctx.beginPath();
-        ctx.arc(bot.x, bot.y, bot.radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      bots.forEach(bot => { ctx.beginPath(); ctx.arc(bot.x, bot.y, bot.radius, 0, Math.PI * 2); ctx.fill(); });
 
-      // Gambar Peluru Bot (Orange)
       ctx.fillStyle = "#fb923c";
-      botBullets.forEach(bb => {
-        ctx.beginPath();
-        ctx.arc(bb.x, bb.y, bb.radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      botBullets.forEach(bb => { ctx.beginPath(); ctx.arc(bb.x, bb.y, bb.radius, 0, Math.PI * 2); ctx.fill(); });
     }
 
     function gameOver() {
       isPlaying = false;
       clearInterval(botSpawner);
+      if (autoShootInterval) clearInterval(autoShootInterval);
+      
+      saveScore(playerName, kills); // Simpan Skor
+      
       msgTitle.innerText = "KAMU GUGUR!";
       startBtn.innerText = "MAIN LAGI 🔄";
       overlay.style.display = "flex";
     }
+
+    // Panggil saat pertama load
+    loadLeaderboard();
   </script>
 </body>
 </html>
