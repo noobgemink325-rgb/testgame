@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Nightmare Mode</title>
+  <title>Bot War Arena 3D - Multi Leaderboard</title>
   <style>
     * {
       box-sizing: border-box;
@@ -182,13 +182,36 @@
       border-radius: 10px;
       padding: 8px 12px;
     }
+    .leaderboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
     .leaderboard-title {
-      font-size: 13px;
+      font-size: 12px;
       color: #facc15;
       font-weight: bold;
-      text-align: center;
-      margin-bottom: 4px;
       text-transform: uppercase;
+    }
+    .tab-group {
+      display: flex;
+      gap: 4px;
+    }
+    .tab-btn {
+      padding: 3px 8px;
+      font-size: 10px;
+      font-weight: bold;
+      border-radius: 4px;
+      border: 1px solid #475569;
+      background: #334155;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #a855f7;
+      color: #fff;
+      border-color: #c084fc;
     }
     ol { padding-left: 20px; font-size: 12px; color: #cbd5e1; }
     li { margin-bottom: 2px; }
@@ -238,7 +261,13 @@
   </div>
 
   <div class="leaderboard-box">
-    <div class="leaderboard-title">🏆 LEADERBOARD TOP KILL</div>
+    <div class="leaderboard-header">
+      <span class="leaderboard-title">🏆 TOP KILL</span>
+      <div class="tab-group">
+        <button id="tab-normal" class="tab-btn active" onclick="switchLeaderboardTab('NORMAL')">NORMAL</button>
+        <button id="tab-nightmare" class="tab-btn" onclick="switchLeaderboardTab('NIGHTMARE')">NIGHTMARE 💀</button>
+      </div>
+    </div>
     <ol id="leaderboard-list">
       <p class="no-data">Memuat data dari server...</p>
     </ol>
@@ -260,9 +289,18 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const leaderboardList = document.getElementById("leaderboard-list");
+    let activeLeaderboardTab = "NORMAL";
+    let leaderboardListener = null;
 
-    function loadLeaderboard() {
-      db.ref('leaderboard').orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
+    // Memuat Leaderboard Berdasarkan Mode yang Dipilih
+    function loadLeaderboard(mode) {
+      if (leaderboardListener) {
+        db.ref(`leaderboard_${mode.toLowerCase()}`).off('value', leaderboardListener);
+      }
+
+      leaderboardList.innerHTML = `<p class="no-data">Memuat data...</p>`;
+
+      leaderboardListener = db.ref(`leaderboard_${mode.toLowerCase()}`).orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
         leaderboardList.innerHTML = "";
         let scores = [];
 
@@ -273,25 +311,32 @@
         scores.sort((a, b) => b.kills - a.kills);
 
         if (scores.length === 0) {
-          leaderboardList.innerHTML = `<p class="no-data">Belum ada skor. Jadilah nomor 1!</p>`;
+          leaderboardList.innerHTML = `<p class="no-data">Belum ada skor di mode ${mode}.</p>`;
           return;
         }
 
         scores.forEach((item) => {
           const li = document.createElement("li");
-          const modeTag = item.mode ? ` [${item.mode}]` : '';
-          li.innerHTML = `<b>${item.name}${modeTag}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
+          li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
           leaderboardList.appendChild(li);
         });
       });
     }
 
+    function switchLeaderboardTab(mode) {
+      activeLeaderboardTab = mode;
+      document.getElementById('tab-normal').classList.toggle('active', mode === 'NORMAL');
+      document.getElementById('tab-nightmare').classList.toggle('active', mode === 'NIGHTMARE');
+      loadLeaderboard(mode);
+    }
+
+    // Simpan skor ke database terpisah (leaderboard_normal / leaderboard_nightmare)
     function saveScore(name, killCount, mode) {
       if (killCount === 0) return;
-      db.ref('leaderboard').push({
+      const path = `leaderboard_${mode.toLowerCase()}`;
+      db.ref(path).push({
         name: name,
         kills: killCount,
-        mode: mode,
         timestamp: Date.now()
       });
     }
@@ -315,7 +360,7 @@
     let keys = {}, lastMoveDir = { x: 0, z: -1 }, joystickDir = { x: 0, y: 0 };
     let botSpawner, autoShootInterval, autoShoot = false, playerName = "Player";
     let currentWeapon = "PISTOL";
-    let gameMode = "NORMAL"; // NORMAL / NIGHTMARE
+    let gameMode = "NORMAL";
     let lastShootTime = 0;
     let nextBossThreshold = 5;
     const ARENA_SIZE = 26;
@@ -326,6 +371,7 @@
       document.getElementById('btn-nightmare').classList.toggle('active', mode === 'NIGHTMARE');
       modeLabel.innerText = mode;
       modeLabel.style.color = mode === 'NIGHTMARE' ? '#a855f7' : '#f87171';
+      switchLeaderboardTab(mode);
     }
 
     function init3D() {
@@ -475,7 +521,7 @@
 
     function startGame() {
       playerName = playerNameInput.value.trim() || "Player";
-      playerHP = (gameMode === "NIGHTMARE") ? 50 : 100; // Nightmare HP lebih tipis!
+      playerHP = (gameMode === "NIGHTMARE") ? 50 : 100;
       kills = 0;
       nextBossThreshold = 5;
       isPlaying = true;
@@ -532,7 +578,6 @@
       if (!isPlaying) return;
 
       const now = Date.now();
-      // Durasi Cooldown Tembakan: Bazoka (1000ms), Pistol (250ms)
       const cooldown = (currentWeapon === "BAZOKA") ? 1000 : 250;
       
       if (now - lastShootTime < cooldown) return;
@@ -553,7 +598,7 @@
         bullets.push({ mesh: mesh, dx: dx, dz: dz, type: "PISTOL" });
 
       } else if (currentWeapon === "BAZOKA") {
-        let dx = (lastMoveDir.x / mag) * 0.22; // Peluru Bazoka diperlambat agar terasa berat
+        let dx = (lastMoveDir.x / mag) * 0.22;
         let dz = (lastMoveDir.z / mag) * 0.22;
 
         const bGeo = new THREE.SphereGeometry(0.5, 10, 10);
@@ -643,10 +688,9 @@
             } else if (b.type === "BAZOKA") {
               createExplosion(b.mesh.position.x, b.mesh.position.z);
 
-              // Splash damage AOE Bazoka
               for (let j = bots.length - 1; j >= 0; j--) {
                 let distToExplosion = b.mesh.position.distanceTo(bots[j].mesh.position);
-                if (distToExplosion <= 4.5) { // Radius ledakan AOE
+                if (distToExplosion <= 4.5) {
                   bots[j].hp -= 4;
                   if (bots[j].hp <= 0) {
                     scene.remove(bots[j].mesh);
@@ -754,7 +798,7 @@
     }
 
     init3D();
-    loadLeaderboard();
+    loadLeaderboard('NORMAL');
   </script>
 </body>
 </html>
