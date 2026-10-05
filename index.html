@@ -167,6 +167,10 @@
 
   <!-- Library Three.js 3D -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Library Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -195,38 +199,61 @@
   <div class="leaderboard-box">
     <div class="leaderboard-title">🏆 LEADERBOARD TOP KILL</div>
     <ol id="leaderboard-list">
-      <p class="no-data">Belum ada skor tercatat.</p>
+      <p class="no-data">Memuat data dari server...</p>
     </ol>
   </div>
 
   <script>
-    // --- PENYIMPANAN LEADERBOARD STABIL ---
+    // --- INTEGRASI FIREBASE REALTIME DATABASE ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBOo74lEYtQGFC5_1NeDLPi0DuG2QhAK3g",
+      authDomain: "bot-war-arena.firebaseapp.com",
+      databaseURL: "https://bot-war-arena-default-rtdb.firebaseio.com",
+      projectId: "bot-war-arena",
+      storageBucket: "bot-war-arena.firebasestorage.app",
+      messagingSenderId: "622360630602",
+      appId: "1:622360630602:web:35fd02550b36605be55db3",
+      measurementId: "G-X0T2H996NE"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
     const leaderboardList = document.getElementById("leaderboard-list");
 
+    // Fungsi memuat leaderboard online secara realtime
     function loadLeaderboard() {
-      const scores = JSON.parse(localStorage.getItem("war_3d_scores") || "[]");
-      leaderboardList.innerHTML = "";
+      db.ref('leaderboard').orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
+        leaderboardList.innerHTML = "";
+        let scores = [];
 
-      if (scores.length === 0) {
-        leaderboardList.innerHTML = `<p class="no-data">Belum ada skor. Jadilah nomor 1!</p>`;
-        return;
-      }
+        snapshot.forEach((child) => {
+          scores.push(child.val());
+        });
 
-      scores.forEach((item) => {
-        const li = document.createElement("li");
-        li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
-        leaderboardList.appendChild(li);
+        // Urutkan dari Kill tertinggi ke terendah
+        scores.sort((a, b) => b.kills - a.kills);
+
+        if (scores.length === 0) {
+          leaderboardList.innerHTML = `<p class="no-data">Belum ada skor. Jadilah nomor 1!</p>`;
+          return;
+        }
+
+        scores.forEach((item) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
+          leaderboardList.appendChild(li);
+        });
       });
     }
 
+    // Fungsi simpan skor online ke Firebase Database
     function saveScore(name, killCount) {
       if (killCount === 0) return;
-      let scores = JSON.parse(localStorage.getItem("war_3d_scores") || "[]");
-      scores.push({ name: name, kills: killCount });
-      scores.sort((a, b) => b.kills - a.kills);
-      scores = scores.slice(0, 5); // Ambil Top 5
-      localStorage.setItem("war_3d_scores", JSON.stringify(scores));
-      loadLeaderboard();
+      db.ref('leaderboard').push({
+        name: name,
+        kills: killCount,
+        timestamp: Date.now()
+      });
     }
 
     // --- GAME ENGINE 3D ---
