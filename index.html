@@ -2,17 +2,16 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Space Defender - Vercel Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Game - Fixed Score</title>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      user-select: none;
     }
     body {
-      background: #090d16;
+      background: #0f172a;
       color: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
@@ -20,280 +19,220 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      overflow: hidden;
     }
     h1 {
-      margin-bottom: 8px;
-      font-size: 22px;
+      margin-bottom: 5px;
+      color: #22c55e;
+      font-size: 26px;
+    }
+    .score-board {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 12px;
       color: #38bdf8;
-      text-transform: uppercase;
-      letter-spacing: 2px;
     }
     #game-container {
       position: relative;
-      box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+      border: 3px solid #334155;
       border-radius: 12px;
       overflow: hidden;
-      border: 2px solid #1e293b;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     }
     canvas {
-      background: #030712;
+      background: #1e293b;
       display: block;
     }
-    .controls-hint {
-      margin-top: 10px;
-      font-size: 13px;
-      color: #94a3b8;
-      text-align: center;
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #start-btn {
+      padding: 12px 28px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      background: #22c55e;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+    }
+    #start-btn:active {
+      transform: scale(0.95);
+    }
+    .d-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 55px);
+      grid-template-rows: repeat(2, 55px);
+      gap: 6px;
+      margin-top: 15px;
+    }
+    .d-btn {
+      background: #334155;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .d-btn:active {
+      background: #475569;
     }
   </style>
 </head>
 <body>
 
-  <h1>Space Defender 🚀</h1>
+  <h1>Ular Retro 🐍</h1>
+  <div class="score-board">Skor: <span id="score">0</span></div>
+
   <div id="game-container">
-    <canvas id="gameCanvas" width="360" height="520"></canvas>
+    <canvas id="canvas" width="300" height="300"></canvas>
+    
+    <div id="overlay">
+      <h2 id="msg-title" style="margin-bottom: 15px; color: #38bdf8;">Siap Main?</h2>
+      <button id="start-btn" onclick="startGame()">MULAI GAME</button>
+    </div>
   </div>
-  <p class="controls-hint">Pake <b>Panah Kiri/Kanan & SPASI</b>, atau <b>Geser/Sentuh Screen</b> di HP</p>
+
+  <div class="d-pad">
+    <div></div>
+    <button class="d-btn" onclick="changeDir('UP')">▲</button>
+    <div></div>
+    <button class="d-btn" onclick="changeDir('LEFT')">◄</button>
+    <button class="d-btn" onclick="changeDir('DOWN')">▼</button>
+    <button class="d-btn" onclick="changeDir('RIGHT')">►</button>
+  </div>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
+    const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const overlay = document.getElementById("overlay");
+    const startBtn = document.getElementById("start-btn");
+    const msgTitle = document.getElementById("msg-title");
 
+    const gridSize = 15;
+    const tileCount = canvas.width / gridSize;
+
+    let snake = [];
+    let food = { x: 0, y: 0 };
+    let dx = gridSize;
+    let dy = 0;
     let score = 0;
-    let gameOver = false;
-    let gameStarted = false;
+    let gameInterval = null;
 
-    // Player (Pesawat)
-    const player = {
-      x: canvas.width / 2 - 15,
-      y: canvas.height - 50,
-      width: 30,
-      height: 30,
-      speed: 5,
-      dx: 0
-    };
-
-    // Array Peluru & Meteor
-    let bullets = [];
-    let meteors = [];
-
-    // Bintang background
-    let stars = [];
-    for (let i = 0; i < 50; i++) {
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 2,
-        speed: Math.random() * 1 + 0.5
-      });
-    }
-
-    // Keyboard Controls
-    document.addEventListener("keydown", (e) => {
-      if (!gameStarted || gameOver) {
-        if (e.code === "Space" || e.code === "Enter") resetGame();
-      }
-      if (e.code === "ArrowLeft" || e.code === "KeyA") player.dx = -player.speed;
-      if (e.code === "ArrowRight" || e.code === "KeyD") player.dx = player.speed;
-      if (e.code === "Space" && gameStarted && !gameOver) shootBullet();
-    });
-
-    document.addEventListener("keyup", (e) => {
-      if (e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "KeyA" || e.code === "KeyD") {
-        player.dx = 0;
-      }
-    });
-
-    // Mobile / Touch Controls
-    let isTouching = false;
-    canvas.addEventListener("touchstart", (e) => {
-      if (!gameStarted || gameOver) {
-        resetGame();
-        return;
-      }
-      isTouching = true;
-      movePlayerTouch(e);
-      shootBullet();
-    });
-
-    canvas.addEventListener("touchmove", (e) => {
-      if (isTouching && gameStarted && !gameOver) {
-        movePlayerTouch(e);
-      }
-    });
-
-    canvas.addEventListener("touchend", () => {
-      isTouching = false;
-    });
-
-    function movePlayerTouch(e) {
-      const rect = canvas.getBoundingClientRect();
-      const touchX = e.touches[0].clientX - rect.left;
-      player.x = touchX - player.width / 2;
-    }
-
-    // Tembak Peluru
-    function shootBullet() {
-      bullets.push({
-        x: player.x + player.width / 2 - 2,
-        y: player.y,
-        width: 4,
-        height: 10,
-        speed: 7
-      });
-    }
-
-    // Spawn Meteor
-    let meteorTimer = 0;
-    function spawnMeteor() {
-      meteorTimer++;
-      if (meteorTimer % 40 === 0) {
-        const size = Math.random() * 20 + 15;
-        meteors.push({
-          x: Math.random() * (canvas.width - size),
-          y: -size,
-          size: size,
-          speed: Math.random() * 2 + 2
-        });
-      }
-    }
-
-    function resetGame() {
+    function startGame() {
+      // Reset Nilai Game
+      snake = [
+        { x: 5 * gridSize, y: 5 * gridSize },
+        { x: 4 * gridSize, y: 5 * gridSize }
+      ];
+      dx = gridSize;
+      dy = 0;
       score = 0;
-      bullets = [];
-      meteors = [];
-      player.x = canvas.width / 2 - 15;
-      gameOver = false;
-      gameStarted = true;
+      scoreEl.innerText = score;
+      
+      spawnFood();
+      overlay.style.display = "none";
+
+      if(gameInterval) clearInterval(gameInterval);
+      gameInterval = setInterval(gameLoop, 120);
     }
 
-    // Loop Utama Game
-    function update() {
-      if (!gameStarted || gameOver) return;
+    function spawnFood() {
+      // Bikin lokasi makanan acak yang tidak kena badan ular
+      let validPosition = false;
+      while (!validPosition) {
+        food.x = Math.floor(Math.random() * tileCount) * gridSize;
+        food.y = Math.floor(Math.random() * tileCount) * gridSize;
 
-      // Move Player
-      player.x += player.dx;
-      if (player.x < 0) player.x = 0;
-      if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
-
-      // Move Bullets
-      bullets.forEach((b, index) => {
-        b.y -= b.speed;
-        if (b.y < 0) bullets.splice(index, 1);
-      });
-
-      // Move Meteors & Collision
-      spawnMeteor();
-      meteors.forEach((m, mIndex) => {
-        m.y += m.speed;
-
-        // Cek kena pesawat
-        if (
-          player.x < m.x + m.size &&
-          player.x + player.width > m.x &&
-          player.y < m.y + m.size &&
-          player.y + player.height > m.y
-        ) {
-          gameOver = true;
-        }
-
-        // Cek kena peluru
-        bullets.forEach((b, bIndex) => {
-          if (
-            b.x < m.x + m.size &&
-            b.x + b.width > m.x &&
-            b.y < m.y + m.size &&
-            b.y + b.height > m.y
-          ) {
-            meteors.splice(mIndex, 1);
-            bullets.splice(bIndex, 1);
-            score += 10;
+        validPosition = true;
+        for (let i = 0; i < snake.length; i++) {
+          if (snake[i].x === food.x && snake[i].y === food.y) {
+            validPosition = false;
+            break;
           }
-        });
+        }
+      }
+    }
 
-        if (m.y > canvas.height) meteors.splice(mIndex, 1);
-      });
+    function changeDir(dir) {
+      if (dir === 'LEFT' && dx === 0) { dx = -gridSize; dy = 0; }
+      if (dir === 'UP' && dy === 0) { dx = 0; dy = -gridSize; }
+      if (dir === 'RIGHT' && dx === 0) { dx = gridSize; dy = 0; }
+      if (dir === 'DOWN' && dy === 0) { dx = 0; dy = gridSize; }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" || e.key === "a") changeDir('LEFT');
+      if (e.key === "ArrowUp" || e.key === "w") changeDir('UP');
+      if (e.key === "ArrowRight" || e.key === "d") changeDir('RIGHT');
+      if (e.key === "ArrowDown" || e.key === "s") changeDir('DOWN');
+    });
+
+    function gameLoop() {
+      // Hitung posisi kepala baru
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+      // Nabrak tembok
+      if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+        return gameOver();
+      }
+
+      // Nabrak badan sendiri
+      for (let i = 0; i < snake.length; i++) {
+        if (head.x === snake[i].x && head.y === snake[i].y) {
+          return gameOver();
+        }
+      }
+
+      // Masukkan kepala ke depan
+      snake.unshift(head);
+
+      // Cek Makan Makanan
+      if (head.x === food.x && head.y === food.y) {
+        score += 10;
+        scoreEl.innerText = score; // Update Tampilan Skor di Layar
+        spawnFood();
+      } else {
+        snake.pop(); // Hapus ekor kalau gak makan
+      }
+
+      draw();
     }
 
     function draw() {
-      // Clear screen
-      ctx.fillStyle = "#030712";
+      // Gambar Ulang Layar
+      ctx.fillStyle = "#1e293b";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw Stars
-      ctx.fillStyle = "#ffffff";
-      stars.forEach((s) => {
-        ctx.fillRect(s.x, s.y, s.size, s.size);
-        s.y += s.speed;
-        if (s.y > canvas.height) s.y = 0;
+      // Gambar Makanan (Merah)
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(food.x, food.y, gridSize - 2, gridSize - 2);
+
+      // Gambar Ular (Hijau)
+      snake.forEach((part, index) => {
+        ctx.fillStyle = index === 0 ? "#22c55e" : "#4ade80";
+        ctx.fillRect(part.x, part.y, gridSize - 2, gridSize - 2);
       });
-
-      if (!gameStarted) {
-        ctx.fillStyle = "#38bdf8";
-        ctx.font = "20px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("SPACE DEFENDER", canvas.width / 2, 220);
-        ctx.fillStyle = "#fff";
-        ctx.font = "14px Arial";
-        ctx.fillText("Tekan SPASI / Sentuh Screen", canvas.width / 2, 260);
-        return;
-      }
-
-      // Draw Player (Segitiga Pesawat Keren)
-      ctx.fillStyle = "#38bdf8";
-      ctx.beginPath();
-      ctx.moveTo(player.x + player.width / 2, player.y);
-      ctx.lineTo(player.x, player.y + player.height);
-      ctx.lineTo(player.x + player.width, player.y + player.height);
-      ctx.closePath();
-      ctx.fill();
-
-      // Draw Bullets (Laser)
-      ctx.fillStyle = "#f43f5e";
-      bullets.forEach((b) => {
-        ctx.fillRect(b.x, b.y, b.width, b.height);
-      });
-
-      // Draw Meteors
-      ctx.fillStyle = "#f59e0b";
-      meteors.forEach((m) => {
-        ctx.beginPath();
-        ctx.arc(m.x + m.size/2, m.y + m.size/2, m.size/2, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // Draw Score
-      ctx.fillStyle = "#fff";
-      ctx.font = "16px Arial";
-      ctx.textAlign = "left";
-      ctx.fillText("Score: " + score, 15, 25);
-
-      // Draw Game Over Screen
-      if (gameOver) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#ef4444";
-        ctx.font = "26px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", canvas.width / 2, 220);
-
-        ctx.fillStyle = "#fff";
-        ctx.font = "16px Arial";
-        ctx.fillText("Score Akhir: " + score, canvas.width / 2, 255);
-        ctx.font = "14px Arial";
-        ctx.fillText("Main Lagi? Sentuh / Tekan SPASI", canvas.width / 2, 295);
-      }
     }
 
-    function gameLoop() {
-      update();
-      draw();
-      requestAnimationFrame(gameLoop);
+    function gameOver() {
+      clearInterval(gameInterval);
+      msgTitle.innerText = "GAME OVER!";
+      msgTitle.style.color = "#ef4444";
+      startBtn.innerText = "MAIN LAGI";
+      overlay.style.display = "flex";
     }
-
-    gameLoop();
   </script>
 </body>
 </html>
