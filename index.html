@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena - Smooth Touch Fix</title>
+  <title>Bot War Arena 3D - Instant Global Leaderboard</title>
   <style>
     * {
       box-sizing: border-box;
@@ -39,14 +39,17 @@
     }
     #game-container {
       position: relative;
+      width: 340px;
+      height: 280px;
       border: 3px solid #334155;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
     }
     canvas {
-      background: #0f172a;
       display: block;
+      width: 100%;
+      height: 100%;
     }
     #overlay {
       position: absolute;
@@ -85,22 +88,19 @@
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
     }
-    #start-btn:active {
-      transform: scale(0.95);
-    }
+    #start-btn:active { transform: scale(0.95); }
 
-    /* Area Kontrol HP */
     .controls-wrapper {
       width: 340px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 15px;
+      margin-top: 10px;
       padding: 0 10px;
     }
     #joystick-container {
-      width: 100px;
-      height: 100px;
+      width: 90px;
+      height: 90px;
       background: rgba(255, 255, 255, 0.08);
       border: 2px solid rgba(255, 255, 255, 0.25);
       border-radius: 50%;
@@ -108,95 +108,79 @@
       touch-action: none;
     }
     #joystick-stick {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       background: #38bdf8;
       border-radius: 50%;
       position: absolute;
-      top: 30px;
-      left: 30px;
+      top: 25px;
+      left: 25px;
       box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
       pointer-events: none;
     }
     .action-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
     .btn-shoot {
-      width: 100px;
-      height: 55px;
+      width: 90px;
+      height: 48px;
       background: #dc2626;
       border: 2px solid #ef4444;
       color: white;
       font-weight: bold;
-      font-size: 15px;
-      border-radius: 12px;
+      font-size: 14px;
+      border-radius: 10px;
       touch-action: manipulation;
-      box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
-    }
-    .btn-shoot:active {
-      background: #991b1b;
-      transform: scale(0.95);
     }
     .toggle-auto {
       background: #334155;
       color: #cbd5e1;
       border: 1px solid #475569;
-      padding: 6px;
+      padding: 5px;
       font-size: 11px;
       border-radius: 6px;
       text-align: center;
     }
 
-    /* Leaderboard Box */
     .leaderboard-box {
       width: 340px;
-      margin-top: 12px;
+      margin-top: 8px;
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 10px;
-      padding: 10px 14px;
+      padding: 8px 12px;
     }
     .leaderboard-title {
       font-size: 13px;
       color: #facc15;
       font-weight: bold;
       text-align: center;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       text-transform: uppercase;
     }
-    ol {
-      padding-left: 20px;
-      font-size: 12px;
-      color: #cbd5e1;
-    }
-    li {
-      margin-bottom: 2px;
-    }
-    .no-data {
-      color: #64748b;
-      font-size: 11px;
-      text-align: center;
-    }
+    ol { padding-left: 20px; font-size: 12px; color: #cbd5e1; }
+    li { margin-bottom: 2px; }
+    .no-data { color: #64748b; font-size: 11px; text-align: center; }
   </style>
+
+  <!-- Three.js 3D Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-  <h1>WAR ARENA vs BOTS 🔫</h1>
+  <h1>WAR ARENA 3D 💣</h1>
   <div class="score-board">Kill: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | HP: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span></div>
 
   <div id="game-container">
-    <canvas id="canvas" width="340" height="300"></canvas>
-    
     <div id="overlay">
-      <h2 id="msg-title" style="margin-bottom: 10px; color: #ef4444;">BATTLE ARENA</h2>
-      <input type="text" id="player-name" placeholder="Masukkan Nickname Kamu..." maxlength="12">
+      <h2 id="msg-title" style="margin-bottom: 10px; color: #ef4444;">GLOBAL ARENA 3D</h2>
+      <input type="text" id="player-name" placeholder="Masukkan Nickname..." maxlength="12">
       <button id="start-btn" onclick="startGame()">MULAI PERANG 💣</button>
     </div>
   </div>
 
-  <!-- Area Control (Multi-Touch Smooth) -->
   <div class="controls-wrapper">
     <div id="joystick-container">
       <div id="joystick-stick"></div>
@@ -209,15 +193,76 @@
   </div>
 
   <div class="leaderboard-box">
-    <div class="leaderboard-title">🏆 LEADERBOARD TOP KILL</div>
+    <div class="leaderboard-title">🌐 LEADERBOARD GLOBAL (ALL PLAYER)</div>
     <ol id="leaderboard-list">
-      <p class="no-data">Belum ada skor tercatat.</p>
+      <p class="no-data">Memuat data global...</p>
     </ol>
   </div>
 
   <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
+    // --- GLOBAL LEADERBOARD DB INSTAN (Mantle API) ---
+    const DB_ENDPOINT = "https://mantledb.sh/v2/botwar-arena-global-v1/leaderboard";
+    const leaderboardList = document.getElementById("leaderboard-list");
+
+    async function loadGlobalLeaderboard() {
+      try {
+        const response = await fetch(DB_ENDPOINT);
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        
+        let scores = Array.isArray(data) ? data : [];
+        leaderboardList.innerHTML = "";
+
+        if (scores.length === 0) {
+          leaderboardList.innerHTML = `<p class="no-data">Belum ada skor global. Jadilah nomor 1!</p>`;
+          return;
+        }
+
+        // Urutkan dari Kill Terbanyak (Top 5)
+        scores.sort((a, b) => b.kills - a.kills);
+        scores = scores.slice(0, 5);
+
+        scores.forEach((item) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
+          leaderboardList.appendChild(li);
+        });
+      } catch (err) {
+        leaderboardList.innerHTML = `<p class="no-data">Gagal memuat data global.</p>`;
+      }
+    }
+
+    async function saveGlobalScore(name, killCount) {
+      if (killCount === 0) return;
+      try {
+        // Ambil data lama
+        const response = await fetch(DB_ENDPOINT);
+        let scores = [];
+        if (response.ok) {
+          const current = await response.json();
+          if (Array.isArray(current)) scores = current;
+        }
+
+        // Tambah data baru
+        scores.push({ name: name, kills: killCount, date: Date.now() });
+        scores.sort((a, b) => b.kills - a.kills);
+        scores = scores.slice(0, 10); // Simpan 10 skor teratas
+
+        // Push update ke cloud
+        await fetch(DB_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(scores)
+        });
+
+        loadGlobalLeaderboard();
+      } catch (err) {
+        console.log("Error saving score", err);
+      }
+    }
+
+    // --- GAME ENGINE 3D ---
+    const container = document.getElementById("game-container");
     const killsEl = document.getElementById("kills");
     const hpEl = document.getElementById("hp");
     const overlay = document.getElementById("overlay");
@@ -225,45 +270,63 @@
     const msgTitle = document.getElementById("msg-title");
     const autoBtn = document.getElementById("auto-btn");
     const playerNameInput = document.getElementById("player-name");
-    const leaderboardList = document.getElementById("leaderboard-list");
     const shootBtn = document.getElementById("shoot-btn");
 
-    let player, bullets, botBullets, bots, kills, isPlaying, gameLoopId, botSpawner, autoShootInterval;
-    let keys = {};
-    let lastMoveDir = { x: 0, y: -1 };
-    let joystickDir = { x: 0, y: 0 };
-    let autoShoot = false;
-    let playerName = "Player";
+    let scene, camera, renderer;
+    let playerMesh, playerHP = 100, kills = 0, isPlaying = false;
+    let bullets = [], botBullets = [], bots = [];
+    let keys = {}, lastMoveDir = { x: 0, z: -1 }, joystickDir = { x: 0, y: 0 };
+    let botSpawner, autoShootInterval, autoShoot = false, playerName = "Player";
+    const ARENA_SIZE = 26;
 
-    // LEADERBOARD
-    function loadLeaderboard() {
-      const scores = JSON.parse(localStorage.getItem("war_leaderboard") || "[]");
-      leaderboardList.innerHTML = "";
-      if (scores.length === 0) {
-        leaderboardList.innerHTML = `<p class="no-data">Belum ada skor tercatat.</p>`;
-        return;
-      }
-      scores.forEach((item) => {
-        const li = document.createElement("li");
-        li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
-        leaderboardList.appendChild(li);
-      });
+    function init3D() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f172a);
+
+      camera = new THREE.PerspectiveCamera(45, 340 / 280, 0.1, 1000);
+      camera.position.set(0, 32, 22);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(340, 280);
+      renderer.shadowMap.enabled = true;
+      container.appendChild(renderer.domElement);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(10, 20, 10);
+      dirLight.castShadow = true;
+      scene.add(dirLight);
+
+      const gridHelper = new THREE.GridHelper(ARENA_SIZE, 16, 0xef4444, 0x334155);
+      gridHelper.position.y = -0.5;
+      scene.add(gridHelper);
+
+      const pGroup = new THREE.Group();
+      const bodyGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+      const bodyMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8 });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.castShadow = true;
+      pGroup.add(body);
+
+      const gunGeo = new THREE.BoxGeometry(0.3, 0.3, 0.8);
+      const gunMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+      const gun = new THREE.Mesh(gunGeo, gunMat);
+      gun.position.set(0, 0, -0.7);
+      pGroup.add(gun);
+
+      playerMesh = pGroup;
+      scene.add(playerMesh);
+
+      animate();
     }
 
-    function saveScore(name, killCount) {
-      if(killCount === 0) return;
-      let scores = JSON.parse(localStorage.getItem("war_leaderboard") || "[]");
-      scores.push({ name: name, kills: killCount });
-      scores.sort((a, b) => b.kills - a.kills);
-      scores = scores.slice(0, 5);
-      localStorage.setItem("war_leaderboard", JSON.stringify(scores));
-      loadLeaderboard();
-    }
-
-    // --- MULTI-TOUCH JOYSTICK LOGIC (SANTUY & MANDIRI) ---
+    // MULTI-TOUCH JOYSTICK LOGIC
     const joyContainer = document.getElementById("joystick-container");
     const joyStick = document.getElementById("joystick-stick");
-    const maxRadius = 30;
+    const maxRadius = 28;
     let joystickTouchId = null;
 
     function processJoyMove(clientX, clientY) {
@@ -282,7 +345,7 @@
       joystickDir.y = dy / maxRadius;
 
       if (Math.abs(joystickDir.x) > 0.05 || Math.abs(joystickDir.y) > 0.05) {
-        lastMoveDir = { x: joystickDir.x, y: joystickDir.y };
+        lastMoveDir = { x: joystickDir.x, z: joystickDir.y };
       }
     }
 
@@ -292,13 +355,10 @@
       joystickDir = { x: 0, y: 0 };
     }
 
-    // Touch Event Handlers
     window.addEventListener("touchstart", (e) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         let touch = e.changedTouches[i];
         const rect = joyContainer.getBoundingClientRect();
-        
-        // Cek jika sentuhan ada di dalam area joystick
         if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
             touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
           if (joystickTouchId === null) {
@@ -313,55 +373,25 @@
       if (joystickTouchId !== null) {
         for (let i = 0; i < e.changedTouches.length; i++) {
           let touch = e.changedTouches[i];
-          if (touch.identifier === joystickTouchId) {
-            processJoyMove(touch.clientX, touch.clientY);
-          }
+          if (touch.identifier === joystickTouchId) processJoyMove(touch.clientX, touch.clientY);
         }
       }
     }, { passive: false });
 
     window.addEventListener("touchend", (e) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === joystickTouchId) {
-          resetJoy();
-        }
+        if (e.changedTouches[i].identifier === joystickTouchId) resetJoy();
       }
     });
 
-    window.addEventListener("touchcancel", (e) => {
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === joystickTouchId) {
-          resetJoy();
-        }
-      }
-    });
-
-    // Support Mouse Drag (Desktop)
-    let isMouseDown = false;
-    joyContainer.addEventListener("mousedown", (e) => {
-      isMouseDown = true;
-      processJoyMove(e.clientX, e.clientY);
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (isMouseDown) processJoyMove(e.clientX, e.clientY);
-    });
-    window.addEventListener("mouseup", () => {
-      if (isMouseDown) {
-        isMouseDown = false;
-        resetJoy();
-      }
-    });
-
-    // Tombol Tembak Handler (Touch + Click)
     shootBtn.addEventListener("touchstart", (e) => {
-      e.preventDefault(); // Biar gak ganggu touch joystick
+      e.preventDefault();
       if (isPlaying) playerShoot();
     });
     shootBtn.addEventListener("mousedown", () => {
       if (isPlaying) playerShoot();
     });
 
-    // KEYBOARD CONTROLS
     window.addEventListener("keydown", (e) => {
       keys[e.key] = true;
       if (e.code === "Space" && isPlaying) playerShoot();
@@ -381,87 +411,117 @@
     }
 
     function startGame() {
-      playerName = playerNameInput.value.trim() || "User";
-      player = { x: 170, y: 150, radius: 12, hp: 100, speed: 3 };
-      bullets = [];
-      botBullets = [];
-      bots = [];
+      playerName = playerNameInput.value.trim() || "Player";
+      playerHP = 100;
       kills = 0;
       isPlaying = true;
-      
+
+      bullets.forEach(b => scene.remove(b.mesh));
+      botBullets.forEach(bb => scene.remove(bb.mesh));
+      bots.forEach(bot => scene.remove(bot.mesh));
+      bullets = []; botBullets = []; bots = [];
+
+      playerMesh.position.set(0, 0.6, 0);
       killsEl.innerText = kills;
-      hpEl.innerText = player.hp;
+      hpEl.innerText = playerHP;
       overlay.style.display = "none";
 
       if (botSpawner) clearInterval(botSpawner);
       botSpawner = setInterval(spawnBot, 1800);
-
-      if (gameLoopId) cancelAnimationFrame(gameLoopId);
-      update();
     }
 
     function spawnBot() {
       if (!isPlaying) return;
-      let x = Math.random() < 0.5 ? 0 : canvas.width;
-      let y = Math.random() * canvas.height;
+      let side = Math.random() < 0.5 ? -1 : 1;
+      let x = (Math.random() - 0.5) * ARENA_SIZE;
+      let z = side * (ARENA_SIZE / 2);
 
-      bots.push({ x: x, y: y, radius: 10, speed: 1.2, lastShoot: Date.now() });
+      const botGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+      const botMat = new THREE.MeshPhongMaterial({ color: 0xef4444 });
+      const mesh = new THREE.Mesh(botGeo, botMat);
+      mesh.position.set(x, 0.6, z);
+      scene.add(mesh);
+
+      bots.push({ mesh: mesh, speed: 0.08, lastShoot: Date.now() });
     }
 
     function playerShoot() {
       if (!isPlaying) return;
-      let mag = Math.hypot(lastMoveDir.x, lastMoveDir.y) || 1;
-      bullets.push({
-        x: player.x,
-        y: player.y,
-        dx: (lastMoveDir.x / mag) * 6,
-        dy: (lastMoveDir.y / mag) * 6,
-        radius: 4
-      });
+      let mag = Math.hypot(lastMoveDir.x, lastMoveDir.z) || 1;
+      let dx = (lastMoveDir.x / mag) * 0.4;
+      let dz = (lastMoveDir.z / mag) * 0.4;
+
+      const bGeo = new THREE.SphereGeometry(0.25, 8, 8);
+      const bMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+      const mesh = new THREE.Mesh(bGeo, bMat);
+      mesh.position.set(playerMesh.position.x, 0.6, playerMesh.position.z);
+      scene.add(mesh);
+
+      bullets.push({ mesh: mesh, dx: dx, dz: dz });
     }
 
-    function update() {
+    function updateGameLogic() {
       if (!isPlaying) return;
 
       let moveX = joystickDir.x;
-      let moveY = joystickDir.y;
+      let moveZ = joystickDir.y;
 
-      if (keys['ArrowUp'] || keys['w']) moveY = -1;
-      if (keys['ArrowDown'] || keys['s']) moveY = 1;
+      if (keys['ArrowUp'] || keys['w']) moveZ = -1;
+      if (keys['ArrowDown'] || keys['s']) moveZ = 1;
       if (keys['ArrowLeft'] || keys['a']) moveX = -1;
       if (keys['ArrowRight'] || keys['d']) moveX = 1;
 
-      if (moveX !== 0 || moveY !== 0) {
-        player.x += moveX * player.speed;
-        player.y += moveY * player.speed;
+      if (moveX !== 0 || moveZ !== 0) {
+        playerMesh.position.x += moveX * 0.12;
+        playerMesh.position.z += moveZ * 0.12;
+        lastMoveDir = { x: moveX, z: moveZ };
+
+        let angle = Math.atan2(moveX, moveZ);
+        playerMesh.rotation.y = angle + Math.PI;
       }
 
-      player.x = Math.max(12, Math.min(canvas.width - 12, player.x));
-      player.y = Math.max(12, Math.min(canvas.height - 12, player.y));
+      const limit = (ARENA_SIZE / 2) - 1;
+      playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
+      playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
       bullets.forEach((b, index) => {
-        b.x += b.dx;
-        b.y += b.dy;
-        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(index, 1);
+        b.mesh.position.x += b.dx;
+        b.mesh.position.z += b.dz;
+        if (Math.abs(b.mesh.position.x) > limit || Math.abs(b.mesh.position.z) > limit) {
+          scene.remove(b.mesh);
+          bullets.splice(index, 1);
+        }
       });
 
       bots.forEach((bot, bIndex) => {
-        let angle = Math.atan2(player.y - bot.y, player.x - bot.x);
-        bot.x += Math.cos(angle) * bot.speed;
-        bot.y += Math.sin(angle) * bot.speed;
+        let dx = playerMesh.position.x - bot.mesh.position.x;
+        let dz = playerMesh.position.z - bot.mesh.position.z;
+        let angle = Math.atan2(dx, dz);
+
+        bot.mesh.position.x += Math.sin(angle) * bot.speed;
+        bot.mesh.position.z += Math.cos(angle) * bot.speed;
+        bot.mesh.rotation.y = angle;
 
         if (Date.now() - bot.lastShoot > 1500) {
+          const bbGeo = new THREE.SphereGeometry(0.2, 8, 8);
+          const bbMat = new THREE.MeshBasicMaterial({ color: 0xfb923c });
+          const bbMesh = new THREE.Mesh(bbGeo, bbMat);
+          bbMesh.position.set(bot.mesh.position.x, 0.6, bot.mesh.position.z);
+          scene.add(bbMesh);
+
           botBullets.push({
-            x: bot.x, y: bot.y,
-            dx: Math.cos(angle) * 3.5, dy: Math.sin(angle) * 3.5,
-            radius: 3
+            mesh: bbMesh,
+            dx: Math.sin(angle) * 0.25,
+            dz: Math.cos(angle) * 0.25
           });
           bot.lastShoot = Date.now();
         }
 
         bullets.forEach((b, pIndex) => {
-          let dist = Math.hypot(b.x - bot.x, b.y - bot.y);
-          if (dist < b.radius + bot.radius) {
+          let dist = b.mesh.position.distanceTo(bot.mesh.position);
+          if (dist < 0.9) {
+            scene.remove(bot.mesh);
+            scene.remove(b.mesh);
             bots.splice(bIndex, 1);
             bullets.splice(pIndex, 1);
             kills++;
@@ -471,49 +531,24 @@
       });
 
       botBullets.forEach((bb, index) => {
-        bb.x += bb.dx;
-        bb.y += bb.dy;
+        bb.mesh.position.x += bb.dx;
+        bb.mesh.position.z += bb.dz;
 
-        let dist = Math.hypot(bb.x - player.x, bb.y - player.y);
-        if (dist < bb.radius + player.radius) {
-          player.hp -= 10;
-          hpEl.innerText = player.hp;
+        let dist = bb.mesh.position.distanceTo(playerMesh.position);
+        if (dist < 0.8) {
+          scene.remove(bb.mesh);
           botBullets.splice(index, 1);
+          playerHP -= 10;
+          hpEl.innerText = playerHP;
 
-          if (player.hp <= 0) gameOver();
+          if (playerHP <= 0) gameOver();
         }
 
-        if (bb.x < 0 || bb.x > canvas.width || bb.y < 0 || bb.y > canvas.height) botBullets.splice(index, 1);
+        if (Math.abs(bb.mesh.position.x) > limit || Math.abs(bb.mesh.position.z) > limit) {
+          scene.remove(bb.mesh);
+          botBullets.splice(index, 1);
+        }
       });
-
-      draw();
-      gameLoopId = requestAnimationFrame(update);
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = "#38bdf8";
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      let mag = Math.hypot(lastMoveDir.x, lastMoveDir.y) || 1;
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(player.x, player.y);
-      ctx.lineTo(player.x + (lastMoveDir.x / mag) * 18, player.y + (lastMoveDir.y / mag) * 18);
-      ctx.stroke();
-
-      ctx.fillStyle = "#facc15";
-      bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2); ctx.fill(); });
-
-      ctx.fillStyle = "#ef4444";
-      bots.forEach(bot => { ctx.beginPath(); ctx.arc(bot.x, bot.y, bot.radius, 0, Math.PI * 2); ctx.fill(); });
-
-      ctx.fillStyle = "#fb923c";
-      botBullets.forEach(bb => { ctx.beginPath(); ctx.arc(bb.x, bb.y, bb.radius, 0, Math.PI * 2); ctx.fill(); });
     }
 
     function gameOver() {
@@ -521,14 +556,21 @@
       clearInterval(botSpawner);
       if (autoShootInterval) clearInterval(autoShootInterval);
       
-      saveScore(playerName, kills);
+      saveGlobalScore(playerName, kills);
       
       msgTitle.innerText = "KAMU GUGUR!";
       startBtn.innerText = "MAIN LAGI 🔄";
       overlay.style.display = "flex";
     }
 
-    loadLeaderboard();
+    function animate() {
+      requestAnimationFrame(animate);
+      updateGameLogic();
+      renderer.render(scene, camera);
+    }
+
+    init3D();
+    loadGlobalLeaderboard();
   </script>
 </body>
 </html>
