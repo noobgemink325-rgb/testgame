@@ -121,25 +121,35 @@
     .action-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
     }
     .btn-shoot {
-      width: 90px;
-      height: 48px;
+      width: 100px;
+      height: 42px;
       background: #dc2626;
       border: 2px solid #ef4444;
       color: white;
       font-weight: bold;
-      font-size: 14px;
-      border-radius: 10px;
+      font-size: 13px;
+      border-radius: 8px;
       touch-action: manipulation;
+    }
+    .btn-weapon {
+      background: #0284c7;
+      color: #fff;
+      border: 1px solid #38bdf8;
+      padding: 5px;
+      font-size: 11px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
     }
     .toggle-auto {
       background: #334155;
       color: #cbd5e1;
       border: 1px solid #475569;
-      padding: 5px;
-      font-size: 11px;
+      padding: 4px;
+      font-size: 10px;
       border-radius: 6px;
       text-align: center;
     }
@@ -191,6 +201,7 @@
     </div>
 
     <div class="action-group">
+      <button class="btn-weapon" id="weapon-btn" onclick="toggleWeapon()">Senjata: PISTOL 🔫</button>
       <button class="btn-shoot" id="shoot-btn">TEMBAK 💥</button>
       <button id="auto-btn" class="toggle-auto" onclick="toggleAutoShoot()">Auto Shoot: OFF</button>
     </div>
@@ -220,7 +231,6 @@
     const db = firebase.database();
     const leaderboardList = document.getElementById("leaderboard-list");
 
-    // Fungsi memuat leaderboard online secara realtime
     function loadLeaderboard() {
       db.ref('leaderboard').orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
         leaderboardList.innerHTML = "";
@@ -230,7 +240,6 @@
           scores.push(child.val());
         });
 
-        // Urutkan dari Kill tertinggi ke terendah
         scores.sort((a, b) => b.kills - a.kills);
 
         if (scores.length === 0) {
@@ -246,7 +255,6 @@
       });
     }
 
-    // Fungsi simpan skor online ke Firebase Database
     function saveScore(name, killCount) {
       if (killCount === 0) return;
       db.ref('leaderboard').push({
@@ -264,14 +272,17 @@
     const startBtn = document.getElementById("start-btn");
     const msgTitle = document.getElementById("msg-title");
     const autoBtn = document.getElementById("auto-btn");
+    const weaponBtn = document.getElementById("weapon-btn");
     const playerNameInput = document.getElementById("player-name");
     const shootBtn = document.getElementById("shoot-btn");
 
     let scene, camera, renderer;
     let playerMesh, playerHP = 100, kills = 0, isPlaying = false;
-    let bullets = [], botBullets = [], bots = [];
+    let bullets = [], botBullets = [], bots = [], explosions = [];
     let keys = {}, lastMoveDir = { x: 0, z: -1 }, joystickDir = { x: 0, y: 0 };
     let botSpawner, autoShootInterval, autoShoot = false, playerName = "Player";
+    let currentWeapon = "PISTOL";
+    let nextBossThreshold = 5; // Spawns Boss every 5 kills
     const ARENA_SIZE = 26;
 
     function init3D() {
@@ -393,13 +404,27 @@
     });
     window.addEventListener("keyup", (e) => keys[e.key] = false);
 
+    function toggleWeapon() {
+      if (currentWeapon === "PISTOL") {
+        currentWeapon = "BAZOKA";
+        weaponBtn.innerText = "Senjata: BAZOKA 🚀";
+        weaponBtn.style.background = "#d97706";
+        weaponBtn.style.borderColor = "#f59e0b";
+      } else {
+        currentWeapon = "PISTOL";
+        weaponBtn.innerText = "Senjata: PISTOL 🔫";
+        weaponBtn.style.background = "#0284c7";
+        weaponBtn.style.borderColor = "#38bdf8";
+      }
+    }
+
     function toggleAutoShoot() {
       autoShoot = !autoShoot;
       autoBtn.innerText = autoShoot ? "Auto Shoot: ON 🔥" : "Auto Shoot: OFF";
       autoBtn.style.background = autoShoot ? "#16a34a" : "#334155";
 
       if (autoShoot) {
-        autoShootInterval = setInterval(() => { if (isPlaying) playerShoot(); }, 250);
+        autoShootInterval = setInterval(() => { if (isPlaying) playerShoot(); }, 300);
       } else {
         clearInterval(autoShootInterval);
       }
@@ -409,12 +434,14 @@
       playerName = playerNameInput.value.trim() || "Player";
       playerHP = 100;
       kills = 0;
+      nextBossThreshold = 5;
       isPlaying = true;
 
       bullets.forEach(b => scene.remove(b.mesh));
       botBullets.forEach(bb => scene.remove(bb.mesh));
       bots.forEach(bot => scene.remove(bot.mesh));
-      bullets = []; botBullets = []; bots = [];
+      explosions.forEach(exp => scene.remove(exp.mesh));
+      bullets = []; botBullets = []; bots = []; explosions = [];
 
       playerMesh.position.set(0, 0.6, 0);
       killsEl.innerText = kills;
@@ -437,22 +464,61 @@
       mesh.position.set(x, 0.6, z);
       scene.add(mesh);
 
-      bots.push({ mesh: mesh, speed: 0.08, lastShoot: Date.now() });
+      bots.push({ mesh: mesh, speed: 0.08, hp: 1, isBoss: false, lastShoot: Date.now() });
+    }
+
+    function spawnBoss() {
+      if (!isPlaying) return;
+      let x = 0;
+      let z = -(ARENA_SIZE / 2) + 2;
+
+      const bossGeo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
+      const bossMat = new THREE.MeshPhongMaterial({ color: 0x8b5cf6 }); // Ungu Boss
+      const mesh = new THREE.Mesh(bossGeo, bossMat);
+      mesh.position.set(x, 1.2, z);
+      scene.add(mesh);
+
+      bots.push({ mesh: mesh, speed: 0.04, hp: 5, isBoss: true, lastShoot: Date.now() });
     }
 
     function playerShoot() {
       if (!isPlaying) return;
       let mag = Math.hypot(lastMoveDir.x, lastMoveDir.z) || 1;
-      let dx = (lastMoveDir.x / mag) * 0.4;
-      let dz = (lastMoveDir.z / mag) * 0.4;
 
-      const bGeo = new THREE.SphereGeometry(0.25, 8, 8);
-      const bMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-      const mesh = new THREE.Mesh(bGeo, bMat);
-      mesh.position.set(playerMesh.position.x, 0.6, playerMesh.position.z);
-      scene.add(mesh);
+      if (currentWeapon === "PISTOL") {
+        let dx = (lastMoveDir.x / mag) * 0.45;
+        let dz = (lastMoveDir.z / mag) * 0.45;
 
-      bullets.push({ mesh: mesh, dx: dx, dz: dz });
+        const bGeo = new THREE.SphereGeometry(0.25, 8, 8);
+        const bMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+        const mesh = new THREE.Mesh(bGeo, bMat);
+        mesh.position.set(playerMesh.position.x, 0.6, playerMesh.position.z);
+        scene.add(mesh);
+
+        bullets.push({ mesh: mesh, dx: dx, dz: dz, type: "PISTOL" });
+
+      } else if (currentWeapon === "BAZOKA") {
+        let dx = (lastMoveDir.x / mag) * 0.28;
+        let dz = (lastMoveDir.z / mag) * 0.28;
+
+        const bGeo = new THREE.SphereGeometry(0.45, 10, 10);
+        const bMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+        const mesh = new THREE.Mesh(bGeo, bMat);
+        mesh.position.set(playerMesh.position.x, 0.6, playerMesh.position.z);
+        scene.add(mesh);
+
+        bullets.push({ mesh: mesh, dx: dx, dz: dz, type: "BAZOKA" });
+      }
+    }
+
+    function createExplosion(x, z) {
+      const expGeo = new THREE.SphereGeometry(2.5, 12, 12);
+      const expMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.8 });
+      const expMesh = new THREE.Mesh(expGeo, expMat);
+      expMesh.position.set(x, 0.6, z);
+      scene.add(expMesh);
+
+      explosions.push({ mesh: expMesh, scale: 1, opacity: 0.8 });
     }
 
     function updateGameLogic() {
@@ -479,16 +545,63 @@
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
+      // Animasi Ledakan
+      explosions.forEach((exp, i) => {
+        exp.scale += 0.05;
+        exp.opacity -= 0.08;
+        exp.mesh.scale.set(exp.scale, exp.scale, exp.scale);
+        exp.mesh.material.opacity = exp.opacity;
+
+        if (exp.opacity <= 0) {
+          scene.remove(exp.mesh);
+          explosions.splice(i, 1);
+        }
+      });
+
+      // Cek Spawning Boss berdasarkan Jumlah Kill
+      if (kills >= nextBossThreshold) {
+        spawnBoss();
+        nextBossThreshold += 5;
+      }
+
+      // Peluru Pemain & Deteksi Hit
       bullets.forEach((b, index) => {
         b.mesh.position.x += b.dx;
         b.mesh.position.z += b.dz;
-        if (Math.abs(b.mesh.position.x) > limit || Math.abs(b.mesh.position.z) > limit) {
+
+        let hitBot = false;
+
+        bots.forEach((bot, bIndex) => {
+          let hitRadius = bot.isBoss ? 1.5 : 0.9;
+          let dist = b.mesh.position.distanceTo(bot.mesh.position);
+
+          if (dist < hitRadius) {
+            hitBot = true;
+
+            let damage = (b.type === "BAZOKA") ? 3 : 1;
+            bot.hp -= damage;
+
+            if (b.type === "BAZOKA") {
+              createExplosion(b.mesh.position.x, b.mesh.position.z);
+            }
+
+            if (bot.hp <= 0) {
+              scene.remove(bot.mesh);
+              bots.splice(bIndex, 1);
+              kills += bot.isBoss ? 3 : 1; // Bonus 3 kill jika ngalahin Boss
+              killsEl.innerText = kills;
+            }
+          }
+        });
+
+        if (hitBot || Math.abs(b.mesh.position.x) > limit || Math.abs(b.mesh.position.z) > limit) {
           scene.remove(b.mesh);
           bullets.splice(index, 1);
         }
       });
 
-      bots.forEach((bot, bIndex) => {
+      // Gerak & Tembakan Bot
+      bots.forEach((bot) => {
         let dx = playerMesh.position.x - bot.mesh.position.x;
         let dz = playerMesh.position.z - bot.mesh.position.z;
         let angle = Math.atan2(dx, dz);
@@ -497,34 +610,43 @@
         bot.mesh.position.z += Math.cos(angle) * bot.speed;
         bot.mesh.rotation.y = angle;
 
-        if (Date.now() - bot.lastShoot > 1500) {
-          const bbGeo = new THREE.SphereGeometry(0.2, 8, 8);
-          const bbMat = new THREE.MeshBasicMaterial({ color: 0xfb923c });
-          const bbMesh = new THREE.Mesh(bbGeo, bbMat);
-          bbMesh.position.set(bot.mesh.position.x, 0.6, bot.mesh.position.z);
-          scene.add(bbMesh);
+        let shootInterval = bot.isBoss ? 1200 : 1500;
 
-          botBullets.push({
-            mesh: bbMesh,
-            dx: Math.sin(angle) * 0.25,
-            dz: Math.cos(angle) * 0.25
-          });
+        if (Date.now() - bot.lastShoot > shootInterval) {
+          if (bot.isBoss) {
+            // Boss nembak 3 peluru sekaligus!
+            [-0.3, 0, 0.3].forEach((spreadAngle) => {
+              const bbGeo = new THREE.SphereGeometry(0.3, 8, 8);
+              const bbMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+              const bbMesh = new THREE.Mesh(bbGeo, bbMat);
+              bbMesh.position.set(bot.mesh.position.x, 1.2, bot.mesh.position.z);
+              scene.add(bbMesh);
+
+              botBullets.push({
+                mesh: bbMesh,
+                dx: Math.sin(angle + spreadAngle) * 0.22,
+                dz: Math.cos(angle + spreadAngle) * 0.22
+              });
+            });
+          } else {
+            // Bot biasa nembak 1 peluru
+            const bbGeo = new THREE.SphereGeometry(0.2, 8, 8);
+            const bbMat = new THREE.MeshBasicMaterial({ color: 0xfb923c });
+            const bbMesh = new THREE.Mesh(bbGeo, bbMat);
+            bbMesh.position.set(bot.mesh.position.x, 0.6, bot.mesh.position.z);
+            scene.add(bbMesh);
+
+            botBullets.push({
+              mesh: bbMesh,
+              dx: Math.sin(angle) * 0.25,
+              dz: Math.cos(angle) * 0.25
+            });
+          }
           bot.lastShoot = Date.now();
         }
-
-        bullets.forEach((b, pIndex) => {
-          let dist = b.mesh.position.distanceTo(bot.mesh.position);
-          if (dist < 0.9) {
-            scene.remove(bot.mesh);
-            scene.remove(b.mesh);
-            bots.splice(bIndex, 1);
-            bullets.splice(pIndex, 1);
-            kills++;
-            killsEl.innerText = kills;
-          }
-        });
       });
 
+      // Peluru Musuh Kena Pemain
       botBullets.forEach((bb, index) => {
         bb.mesh.position.x += bb.dx;
         bb.mesh.position.z += bb.dz;
