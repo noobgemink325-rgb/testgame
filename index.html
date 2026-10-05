@@ -2,16 +2,17 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flappy Bird - Vercel Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Space Defender - Vercel Game</title>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      user-select: none;
     }
     body {
-      background: #111827;
+      background: #090d16;
       color: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
@@ -22,298 +23,277 @@
       overflow: hidden;
     }
     h1 {
-      margin-bottom: 10px;
-      font-size: 24px;
+      margin-bottom: 8px;
+      font-size: 22px;
       color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 2px;
     }
     #game-container {
       position: relative;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
       border-radius: 12px;
       overflow: hidden;
+      border: 2px solid #1e293b;
     }
     canvas {
-      background: #70c5ce;
+      background: #030712;
       display: block;
     }
-    .instructions {
-      margin-top: 12px;
-      font-size: 14px;
-      color: #9ca3af;
+    .controls-hint {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #94a3b8;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <h1>Flappy Bird 🚀</h1>
+  <h1>Space Defender 🚀</h1>
   <div id="game-container">
-    <canvas id="canvas" width="320" height="480"></canvas>
+    <canvas id="gameCanvas" width="360" height="520"></canvas>
   </div>
-  <p class="instructions">Tekan <b>SPASI</b> atau <b>KLIK SCREEN</b> buat Lompat!</p>
+  <p class="controls-hint">Pake <b>Panah Kiri/Kanan & SPASI</b>, atau <b>Geser/Sentuh Screen</b> di HP</p>
 
   <script>
-    const cvs = document.getElementById("canvas");
-    const ctx = cvs.getContext("2d");
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-    // Game state
-    let frames = 0;
-    const DEGREE = Math.PI/180;
+    let score = 0;
+    let gameOver = false;
+    let gameStarted = false;
 
-    // Control
-    let state = {
-      current: 0,
-      getReady: 0,
-      game: 1,
-      over: 2
+    // Player (Pesawat)
+    const player = {
+      x: canvas.width / 2 - 15,
+      y: canvas.height - 50,
+      width: 30,
+      height: 30,
+      speed: 5,
+      dx: 0
     };
 
-    // Score
-    let score = {
-      best: localStorage.getItem("flappy_best") || 0,
-      value: 0,
-      draw: function() {
-        ctx.fillStyle = "#FFF";
-        ctx.strokeStyle = "#000";
+    // Array Peluru & Meteor
+    let bullets = [];
+    let meteors = [];
 
-        if(state.current == state.game) {
-          ctx.lineWidth = 2;
-          ctx.font = "35px Teko";
-          ctx.fillText(this.value, cvs.width/2 - 10, 50);
-          ctx.strokeText(this.value, cvs.width/2 - 10, 50);
-        } else if(state.current == state.over) {
-          ctx.font = "25px Teko";
-          ctx.fillText("Score: " + this.value, 110, 180);
-          ctx.strokeText("Score: " + this.value, 110, 180);
-          
-          ctx.fillText("Best: " + this.best, 110, 220);
-          ctx.strokeText("Best: " + this.best, 110, 220);
-        }
-      },
-      reset: function() {
-        this.value = 0;
+    // Bintang background
+    let stars = [];
+    for (let i = 0; i < 50; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 2,
+        speed: Math.random() * 1 + 0.5
+      });
+    }
+
+    // Keyboard Controls
+    document.addEventListener("keydown", (e) => {
+      if (!gameStarted || gameOver) {
+        if (e.code === "Space" || e.code === "Enter") resetGame();
       }
-    };
-
-    // Start Button
-    const startBtn = {
-      x: 120,
-      y: 263,
-      w: 83,
-      h: 29
-    };
-
-    // Event Listener / Controls
-    window.addEventListener("keydown", function(e) {
-      if(e.code === "Space") action();
-    });
-    cvs.addEventListener("click", function(evt) {
-      action();
+      if (e.code === "ArrowLeft" || e.code === "KeyA") player.dx = -player.speed;
+      if (e.code === "ArrowRight" || e.code === "KeyD") player.dx = player.speed;
+      if (e.code === "Space" && gameStarted && !gameOver) shootBullet();
     });
 
-    function action() {
-      switch(state.current) {
-        case state.getReady:
-          state.current = state.game;
-          break;
-        case state.game:
-          bird.flap();
-          break;
-        case state.over:
-          pipes.reset();
-          bird.speedReset();
-          score.reset();
-          state.current = state.getReady;
-          break;
+    document.addEventListener("keyup", (e) => {
+      if (e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "KeyA" || e.code === "KeyD") {
+        player.dx = 0;
+      }
+    });
+
+    // Mobile / Touch Controls
+    let isTouching = false;
+    canvas.addEventListener("touchstart", (e) => {
+      if (!gameStarted || gameOver) {
+        resetGame();
+        return;
+      }
+      isTouching = true;
+      movePlayerTouch(e);
+      shootBullet();
+    });
+
+    canvas.addEventListener("touchmove", (e) => {
+      if (isTouching && gameStarted && !gameOver) {
+        movePlayerTouch(e);
+      }
+    });
+
+    canvas.addEventListener("touchend", () => {
+      isTouching = false;
+    });
+
+    function movePlayerTouch(e) {
+      const rect = canvas.getBoundingClientRect();
+      const touchX = e.touches[0].clientX - rect.left;
+      player.x = touchX - player.width / 2;
+    }
+
+    // Tembak Peluru
+    function shootBullet() {
+      bullets.push({
+        x: player.x + player.width / 2 - 2,
+        y: player.y,
+        width: 4,
+        height: 10,
+        speed: 7
+      });
+    }
+
+    // Spawn Meteor
+    let meteorTimer = 0;
+    function spawnMeteor() {
+      meteorTimer++;
+      if (meteorTimer % 40 === 0) {
+        const size = Math.random() * 20 + 15;
+        meteors.push({
+          x: Math.random() * (canvas.width - size),
+          y: -size,
+          size: size,
+          speed: Math.random() * 2 + 2
+        });
       }
     }
 
-    // Bird
-    const bird = {
-      x: 50,
-      y: 150,
-      w: 20,
-      h: 20,
-      gravity: 0.25,
-      jump: 4.6,
-      speed: 0,
-      rotation: 0,
+    function resetGame() {
+      score = 0;
+      bullets = [];
+      meteors = [];
+      player.x = canvas.width / 2 - 15;
+      gameOver = false;
+      gameStarted = true;
+    }
 
-      draw: function() {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.rotation);
-        
-        ctx.fillStyle = "#facc15";
-        ctx.beginPath();
-        ctx.arc(0, 0, 12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#000";
-        ctx.stroke();
+    // Loop Utama Game
+    function update() {
+      if (!gameStarted || gameOver) return;
 
-        // Mata
-        ctx.fillStyle = "#fff";
-        ctx.beginPath();
-        ctx.arc(4, -4, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#000";
-        ctx.beginPath();
-        ctx.arc(5, -4, 2, 0, Math.PI * 2);
-        ctx.fill();
+      // Move Player
+      player.x += player.dx;
+      if (player.x < 0) player.x = 0;
+      if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
 
-        ctx.restore();
-      },
+      // Move Bullets
+      bullets.forEach((b, index) => {
+        b.y -= b.speed;
+        if (b.y < 0) bullets.splice(index, 1);
+      });
 
-      flap: function() {
-        this.speed = -this.jump;
-      },
+      // Move Meteors & Collision
+      spawnMeteor();
+      meteors.forEach((m, mIndex) => {
+        m.y += m.speed;
 
-      update: function() {
-        if(state.current === state.getReady) {
-          this.y = 150;
-          this.rotation = 0 * DEGREE;
-        } else {
-          this.speed += this.gravity;
-          this.y += this.speed;
-
-          if(this.y + this.h/2 >= cvs.height - 20) {
-            this.y = cvs.height - 20;
-            if(state.current == state.game) {
-              state.current = state.over;
-            }
-          }
-
-          if(this.speed >= this.jump) {
-            this.rotation = 90 * DEGREE;
-          } else {
-            this.rotation = -25 * DEGREE;
-          }
-        }
-      },
-      speedReset: function() {
-        this.speed = 0;
-      }
-    };
-
-    // Pipes
-    const pipes = {
-      position: [],
-      w: 40,
-      gap: 100,
-      dx: 2,
-
-      draw: function() {
-        for(let i = 0; i < this.position.length; i++) {
-          let p = this.position[i];
-          let topY = p.y;
-          let bottomY = p.y + this.gap;
-
-          // Pipe Atas
-          ctx.fillStyle = "#22c55e";
-          ctx.fillRect(p.x, 0, this.w, topY);
-          ctx.strokeStyle = "#000";
-          ctx.strokeRect(p.x, 0, this.w, topY);
-
-          // Pipe Bawah
-          ctx.fillRect(p.x, bottomY, this.w, cvs.height - bottomY);
-          ctx.strokeRect(p.x, bottomY, this.w, cvs.height - bottomY);
-        }
-      },
-
-      update: function() {
-        if(state.current !== state.game) return;
-
-        if(frames % 100 == 0) {
-          this.position.push({
-            x: cvs.width,
-            y: -150 * (Math.random() + 1)
-          });
+        // Cek kena pesawat
+        if (
+          player.x < m.x + m.size &&
+          player.x + player.width > m.x &&
+          player.y < m.y + m.size &&
+          player.y + player.height > m.y
+        ) {
+          gameOver = true;
         }
 
-        for(let i = 0; i < this.position.length; i++) {
-          let p = this.position[i];
-
-          let bottomPipeY = p.y + this.gap;
-
-          // Collision Detection
-          if(bird.x + 10 > p.x && bird.x - 10 < p.x + this.w &&
-            bird.y - 10 < p.y + 280 && bird.y + 10 > p.y) {
-            state.current = state.over;
+        // Cek kena peluru
+        bullets.forEach((b, bIndex) => {
+          if (
+            b.x < m.x + m.size &&
+            b.x + b.width > m.x &&
+            b.y < m.y + m.size &&
+            b.y + b.height > m.y
+          ) {
+            meteors.splice(mIndex, 1);
+            bullets.splice(bIndex, 1);
+            score += 10;
           }
-          if(bird.x + 10 > p.x && bird.x - 10 < p.x + this.w &&
-            bird.y + 10 > bottomPipeY) {
-            state.current = state.over;
-          }
+        });
 
-          // Move pipes
-          p.x -= this.dx;
+        if (m.y > canvas.height) meteors.splice(mIndex, 1);
+      });
+    }
 
-          // Delete pipes
-          if(p.x + this.w <= 0) {
-            this.position.shift();
-            score.value += 1;
-            score.best = Math.max(score.value, score.best);
-            localStorage.setItem("flappy_best", score.best);
-          }
-        }
-      },
+    function draw() {
+      // Clear screen
+      ctx.fillStyle = "#030712";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      reset: function() {
-        this.position = [];
-      }
-    };
+      // Draw Stars
+      ctx.fillStyle = "#ffffff";
+      stars.forEach((s) => {
+        ctx.fillRect(s.x, s.y, s.size, s.size);
+        s.y += s.speed;
+        if (s.y > canvas.height) s.y = 0;
+      });
 
-    // Ground
-    const fg = {
-      draw: function() {
-        ctx.fillStyle = "#eab308";
-        ctx.fillRect(0, cvs.height - 20, cvs.width, 20);
-      }
-    };
-
-    // Draw UI overlay
-    function drawOverlay() {
-      if(state.current === state.getReady) {
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.fillRect(0, 0, cvs.width, cvs.height);
-        
-        ctx.fillStyle = "#FFF";
+      if (!gameStarted) {
+        ctx.fillStyle = "#38bdf8";
         ctx.font = "20px Arial";
-        ctx.fillText("Klik / Spasi buat Start", 60, 240);
-      } else if(state.current === state.over) {
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(0, 0, cvs.width, cvs.height);
+        ctx.textAlign = "center";
+        ctx.fillText("SPACE DEFENDER", canvas.width / 2, 220);
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px Arial";
+        ctx.fillText("Tekan SPASI / Sentuh Screen", canvas.width / 2, 260);
+        return;
+      }
+
+      // Draw Player (Segitiga Pesawat Keren)
+      ctx.fillStyle = "#38bdf8";
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.width / 2, player.y);
+      ctx.lineTo(player.x, player.y + player.height);
+      ctx.lineTo(player.x + player.width, player.y + player.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw Bullets (Laser)
+      ctx.fillStyle = "#f43f5e";
+      bullets.forEach((b) => {
+        ctx.fillRect(b.x, b.y, b.width, b.height);
+      });
+
+      // Draw Meteors
+      ctx.fillStyle = "#f59e0b";
+      meteors.forEach((m) => {
+        ctx.beginPath();
+        ctx.arc(m.x + m.size/2, m.y + m.size/2, m.size/2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw Score
+      ctx.fillStyle = "#fff";
+      ctx.font = "16px Arial";
+      ctx.textAlign = "left";
+      ctx.fillText("Score: " + score, 15, 25);
+
+      // Draw Game Over Screen
+      if (gameOver) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "#ef4444";
-        ctx.font = "30px Arial";
-        ctx.fillText("GAME OVER", 70, 130);
+        ctx.font = "26px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, 220);
 
-        ctx.fillStyle = "#FFF";
+        ctx.fillStyle = "#fff";
         ctx.font = "16px Arial";
-        ctx.fillText("Klik / Spasi buat Main Lagi", 65, 270);
+        ctx.fillText("Score Akhir: " + score, canvas.width / 2, 255);
+        ctx.font = "14px Arial";
+        ctx.fillText("Main Lagi? Sentuh / Tekan SPASI", canvas.width / 2, 295);
       }
     }
 
-    // Main Loop
-    function loop() {
-      bird.update();
-      pipes.update();
-
-      // Clear Canvas
-      ctx.fillStyle = "#70c5ce";
-      ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-      pipes.draw();
-      fg.draw();
-      bird.draw();
-      score.draw();
-      drawOverlay();
-
-      frames++;
-      requestAnimationFrame(loop);
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
     }
 
-    loop();
+    gameLoop();
   </script>
 </body>
 </html>
