@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Multi Leaderboard</title>
+  <title>Bot War Arena 3D - Co-Op Multiplayer</title>
   <style>
     * {
       box-sizing: border-box;
@@ -33,7 +33,7 @@
       letter-spacing: 2px;
     }
     .score-board {
-      font-size: 14px;
+      font-size: 13px;
       margin-bottom: 6px;
       color: #cbd5e1;
     }
@@ -57,49 +57,51 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(15, 23, 42, 0.94);
+      background: rgba(15, 23, 42, 0.95);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 10;
-      padding: 20px;
+      padding: 15px;
     }
     input[type="text"] {
-      padding: 10px;
+      padding: 8px;
       border-radius: 6px;
       border: 1px solid #475569;
       background: #1e293b;
       color: #fff;
-      font-size: 15px;
+      font-size: 14px;
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       width: 85%;
       outline: none;
     }
-    .mode-select {
+    .room-group {
       display: flex;
-      gap: 10px;
-      margin-bottom: 12px;
+      gap: 6px;
+      margin-bottom: 10px;
+      width: 85%;
     }
-    .mode-btn {
-      padding: 6px 12px;
-      font-size: 12px;
+    .btn-room {
+      flex: 1;
+      padding: 8px;
+      font-size: 11px;
       font-weight: bold;
       border-radius: 6px;
-      border: 1px solid #475569;
-      background: #334155;
-      color: #cbd5e1;
+      border: 1px solid #38bdf8;
+      background: #0284c7;
+      color: #fff;
       cursor: pointer;
     }
-    .mode-btn.active {
-      background: #ef4444;
-      color: #fff;
-      border-color: #f87171;
+    .btn-room-secondary {
+      background: #334155;
+      border-color: #475569;
+      color: #cbd5e1;
     }
     #start-btn {
-      padding: 12px 28px;
-      font-size: 16px;
+      padding: 10px 24px;
+      font-size: 15px;
       font-weight: bold;
       color: #fff;
       background: #ef4444;
@@ -174,48 +176,17 @@
       text-align: center;
     }
 
-    .leaderboard-box {
+    .status-box {
       width: 340px;
       margin-top: 8px;
       background: #1e293b;
       border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 8px 12px;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 11px;
+      text-align: center;
+      color: #38bdf8;
     }
-    .leaderboard-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    .leaderboard-title {
-      font-size: 12px;
-      color: #facc15;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-    .tab-group {
-      display: flex;
-      gap: 4px;
-    }
-    .tab-btn {
-      padding: 3px 8px;
-      font-size: 10px;
-      font-weight: bold;
-      border-radius: 4px;
-      border: 1px solid #475569;
-      background: #334155;
-      color: #cbd5e1;
-      cursor: pointer;
-    }
-    .tab-btn.active {
-      background: #a855f7;
-      color: #fff;
-      border-color: #c084fc;
-    }
-    ol { padding-left: 20px; font-size: 12px; color: #cbd5e1; }
-    li { margin-bottom: 2px; }
-    .no-data { color: #64748b; font-size: 11px; text-align: center; }
   </style>
 
   <!-- Library Three.js 3D -->
@@ -229,22 +200,24 @@
 
   <h1>WAR ARENA 3D 💣</h1>
   <div class="score-board">
-    Kill: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | 
+    Kill Total: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | 
     HP: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span> | 
-    Mode: <span id="mode-label" style="color:#f87171; font-weight:bold;">NORMAL</span>
+    Room: <span id="room-display" style="color:#facc15; font-weight:bold;">-</span>
   </div>
 
   <div id="game-container">
     <div id="overlay">
-      <h2 id="msg-title" style="margin-bottom: 8px; color: #ef4444;">BOT WAR ARENA 3D</h2>
+      <h2 id="msg-title" style="margin-bottom: 6px; color: #ef4444;">CO-OP MULTIPLAYER</h2>
       <input type="text" id="player-name" placeholder="Masukkan Nickname..." maxlength="12">
       
-      <div class="mode-select">
-        <button id="btn-normal" class="mode-btn active" onclick="setDifficulty('NORMAL')">NORMAL</button>
-        <button id="btn-nightmare" class="mode-btn" onclick="setDifficulty('NIGHTMARE')">NIGHTMARE 💀</button>
+      <div class="room-group">
+        <button class="btn-room" onclick="createRoom()">BUAT ROOM ➕</button>
+        <button class="btn-room btn-room-secondary" onclick="joinRoomPrompt()">JOIN ROOM 🔗</button>
       </div>
 
-      <button id="start-btn" onclick="startGame()">MULAI PERANG 💣</button>
+      <input type="text" id="room-code-input" placeholder="Kode Room (4 Digit)" maxlength="4" style="display:none;">
+      <button id="start-btn" onclick="startGame()" style="display:none;">MULAI CO-OP 🚀</button>
+      <p id="room-info" style="font-size:11px; color:#94a3b8; margin-top:4px;"></p>
     </div>
   </div>
 
@@ -260,21 +233,12 @@
     </div>
   </div>
 
-  <div class="leaderboard-box">
-    <div class="leaderboard-header">
-      <span class="leaderboard-title">🏆 TOP KILL</span>
-      <div class="tab-group">
-        <button id="tab-normal" class="tab-btn active" onclick="switchLeaderboardTab('NORMAL')">NORMAL</button>
-        <button id="tab-nightmare" class="tab-btn" onclick="switchLeaderboardTab('NIGHTMARE')">NIGHTMARE 💀</button>
-      </div>
-    </div>
-    <ol id="leaderboard-list">
-      <p class="no-data">Memuat data dari server...</p>
-    </ol>
+  <div class="status-box" id="status-text">
+    Status: Silakan Buat atau Masuk ke Room
   </div>
 
   <script>
-    // --- INTEGRASI FIREBASE REALTIME DATABASE ---
+    // --- INTEGRASI FIREBASE MULTIPLAYER ---
     const firebaseConfig = {
       apiKey: "AIzaSyBOo74lEYtQGFC5_1NeDLPi0DuG2QhAK3g",
       authDomain: "bot-war-arena.firebaseapp.com",
@@ -288,56 +252,90 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const leaderboardList = document.getElementById("leaderboard-list");
-    let activeLeaderboardTab = "NORMAL";
-    let leaderboardListener = null;
 
-    // Memuat Leaderboard Berdasarkan Mode yang Dipilih
-    function loadLeaderboard(mode) {
-      if (leaderboardListener) {
-        db.ref(`leaderboard_${mode.toLowerCase()}`).off('value', leaderboardListener);
+    let roomId = null;
+    let playerRole = null; // 'p1' (Host) atau 'p2' (Joiner)
+    let roomRef = null;
+
+    function createRoom() {
+      roomId = Math.floor(1000 + Math.random() * 9000).toString();
+      playerRole = 'p1';
+      roomRef = db.ref(`rooms/${roomId}`);
+
+      roomRef.set({
+        status: 'waiting',
+        p1: { name: document.getElementById('player-name').value || 'P1', x: -2, z: 0, hp: 100 },
+        p2: { name: 'Menunggu...', x: 2, z: 0, hp: 100 },
+        kills: 0
+      });
+
+      document.getElementById('room-display').innerText = roomId;
+      document.getElementById('room-info').innerText = `Kode Room: ${roomId} (Bagikan ke teman!)`;
+      document.getElementById('start-btn').style.display = 'block';
+      document.getElementById('status-text').innerText = `Room ${roomId} dibuat. Menunggu Player 2...`;
+
+      listenToRoom();
+    }
+
+    function joinRoomPrompt() {
+      const codeInput = document.getElementById('room-code-input');
+      if (codeInput.style.display === 'none') {
+        codeInput.style.display = 'block';
+        return;
       }
 
-      leaderboardList.innerHTML = `<p class="no-data">Memuat data...</p>`;
+      roomId = codeInput.value.trim();
+      if (!roomId) return alert("Masukkan kode room!");
 
-      leaderboardListener = db.ref(`leaderboard_${mode.toLowerCase()}`).orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
-        leaderboardList.innerHTML = "";
-        let scores = [];
+      playerRole = 'p2';
+      roomRef = db.ref(`rooms/${roomId}`);
 
-        snapshot.forEach((child) => {
-          scores.push(child.val());
-        });
-
-        scores.sort((a, b) => b.kills - a.kills);
-
-        if (scores.length === 0) {
-          leaderboardList.innerHTML = `<p class="no-data">Belum ada skor di mode ${mode}.</p>`;
-          return;
+      roomRef.get().then((snapshot) => {
+        if (snapshot.exists()) {
+          roomRef.child('p2').set({
+            name: document.getElementById('player-name').value || 'P2',
+            x: 2,
+            z: 0,
+            hp: 100
+          });
+          document.getElementById('room-display').innerText = roomId;
+          document.getElementById('status-text').innerText = `Berhasil Join Room ${roomId}! Menunggu Host...`;
+          listenToRoom();
+        } else {
+          alert("Room tidak ditemukan!");
         }
-
-        scores.forEach((item) => {
-          const li = document.createElement("li");
-          li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
-          leaderboardList.appendChild(li);
-        });
       });
     }
 
-    function switchLeaderboardTab(mode) {
-      activeLeaderboardTab = mode;
-      document.getElementById('tab-normal').classList.toggle('active', mode === 'NORMAL');
-      document.getElementById('tab-nightmare').classList.toggle('active', mode === 'NIGHTMARE');
-      loadLeaderboard(mode);
-    }
+    function listenToRoom() {
+      roomRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
 
-    // Simpan skor ke database terpisah (leaderboard_normal / leaderboard_nightmare)
-    function saveScore(name, killCount, mode) {
-      if (killCount === 0) return;
-      const path = `leaderboard_${mode.toLowerCase()}`;
-      db.ref(path).push({
-        name: name,
-        kills: killCount,
-        timestamp: Date.now()
+        // Sync posisi Player Lain
+        const otherRole = playerRole === 'p1' ? 'p2' : 'p1';
+        if (data[otherRole] && otherPlayerMesh) {
+          otherPlayerMesh.position.x = data[otherRole].x;
+          otherPlayerMesh.position.z = data[otherRole].z;
+        }
+
+        // Sync Status Game
+        if (data.status === 'playing' && !isPlaying) {
+          startGameLocal();
+        }
+
+        if (data.kills !== undefined) {
+          kills = data.kills;
+          killsEl.innerText = kills;
+        }
+      });
+
+      // Tembakan Teman
+      roomRef.child('bullets').on('child_added', (snapshot) => {
+        const b = snapshot.val();
+        if (b.owner !== playerRole) {
+          spawnRemoteBullet(b);
+        }
       });
     }
 
@@ -345,34 +343,21 @@
     const container = document.getElementById("game-container");
     const killsEl = document.getElementById("kills");
     const hpEl = document.getElementById("hp");
-    const modeLabel = document.getElementById("mode-label");
     const overlay = document.getElementById("overlay");
     const startBtn = document.getElementById("start-btn");
     const msgTitle = document.getElementById("msg-title");
     const autoBtn = document.getElementById("auto-btn");
     const weaponBtn = document.getElementById("weapon-btn");
-    const playerNameInput = document.getElementById("player-name");
     const shootBtn = document.getElementById("shoot-btn");
 
     let scene, camera, renderer;
-    let playerMesh, playerHP = 100, kills = 0, isPlaying = false;
+    let playerMesh, otherPlayerMesh, playerHP = 100, kills = 0, isPlaying = false;
     let bullets = [], botBullets = [], bots = [], explosions = [];
     let keys = {}, lastMoveDir = { x: 0, z: -1 }, joystickDir = { x: 0, y: 0 };
-    let botSpawner, autoShootInterval, autoShoot = false, playerName = "Player";
+    let botSpawner, autoShootInterval, autoShoot = false;
     let currentWeapon = "PISTOL";
-    let gameMode = "NORMAL";
     let lastShootTime = 0;
-    let nextBossThreshold = 5;
     const ARENA_SIZE = 26;
-
-    function setDifficulty(mode) {
-      gameMode = mode;
-      document.getElementById('btn-normal').classList.toggle('active', mode === 'NORMAL');
-      document.getElementById('btn-nightmare').classList.toggle('active', mode === 'NIGHTMARE');
-      modeLabel.innerText = mode;
-      modeLabel.style.color = mode === 'NIGHTMARE' ? '#a855f7' : '#f87171';
-      switchLeaderboardTab(mode);
-    }
 
     function init3D() {
       scene = new THREE.Scene();
@@ -399,9 +384,21 @@
       gridHelper.position.y = -0.5;
       scene.add(gridHelper);
 
+      // Karakter Utama (Biru / Hijau)
+      playerMesh = createPlayerMesh(playerRole === 'p2' ? 0x22c55e : 0x38bdf8);
+      scene.add(playerMesh);
+
+      // Karakter Teman
+      otherPlayerMesh = createPlayerMesh(playerRole === 'p2' ? 0x38bdf8 : 0x22c55e);
+      scene.add(otherPlayerMesh);
+
+      animate();
+    }
+
+    function createPlayerMesh(colorHex) {
       const pGroup = new THREE.Group();
       const bodyGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
-      const bodyMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8 });
+      const bodyMat = new THREE.MeshPhongMaterial({ color: colorHex });
       const body = new THREE.Mesh(bodyGeo, bodyMat);
       body.castShadow = true;
       pGroup.add(body);
@@ -412,10 +409,7 @@
       gun.position.set(0, 0, -0.7);
       pGroup.add(gun);
 
-      playerMesh = pGroup;
-      scene.add(playerMesh);
-
-      animate();
+      return pGroup;
     }
 
     // MULTI-TOUCH JOYSTICK LOGIC
@@ -520,58 +514,47 @@
     }
 
     function startGame() {
-      playerName = playerNameInput.value.trim() || "Player";
-      playerHP = (gameMode === "NIGHTMARE") ? 50 : 100;
+      if (playerRole === 'p1') {
+        roomRef.update({ status: 'playing' });
+      }
+    }
+
+    function startGameLocal() {
+      playerHP = 100;
       kills = 0;
-      nextBossThreshold = 5;
       isPlaying = true;
 
       bullets.forEach(b => scene.remove(b.mesh));
       botBullets.forEach(bb => scene.remove(bb.mesh));
       bots.forEach(bot => scene.remove(bot.mesh));
-      explosions.forEach(exp => scene.remove(exp.mesh));
-      bullets = []; botBullets = []; bots = []; explosions = [];
+      bullets = []; botBullets = []; bots = [];
 
-      playerMesh.position.set(0, 0.6, 0);
+      playerMesh.position.set(playerRole === 'p1' ? -2 : 2, 0.6, 0);
       killsEl.innerText = kills;
       hpEl.innerText = playerHP;
       overlay.style.display = "none";
+      document.getElementById('status-text').innerText = "Status: Game Berlangsung 🔥";
 
-      if (botSpawner) clearInterval(botSpawner);
-      let spawnRate = (gameMode === "NIGHTMARE") ? 1000 : 1800;
-      botSpawner = setInterval(spawnBot, spawnRate);
+      // Host yang spawn musuh
+      if (playerRole === 'p1') {
+        if (botSpawner) clearInterval(botSpawner);
+        botSpawner = setInterval(spawnBot, 1800);
+      }
     }
 
     function spawnBot() {
-      if (!isPlaying) return;
+      if (!isPlaying || playerRole !== 'p1') return;
       let side = Math.random() < 0.5 ? -1 : 1;
       let x = (Math.random() - 0.5) * ARENA_SIZE;
       let z = side * (ARENA_SIZE / 2);
 
       const botGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
-      const botMatColor = (gameMode === "NIGHTMARE") ? 0xd97706 : 0xef4444;
-      const botMat = new THREE.MeshPhongMaterial({ color: botMatColor });
+      const botMat = new THREE.MeshPhongMaterial({ color: 0xef4444 });
       const mesh = new THREE.Mesh(botGeo, botMat);
       mesh.position.set(x, 0.6, z);
       scene.add(mesh);
 
-      let botSpeed = (gameMode === "NIGHTMARE") ? 0.12 : 0.08;
-      bots.push({ mesh: mesh, speed: botSpeed, hp: 1, isBoss: false, lastShoot: Date.now() });
-    }
-
-    function spawnBoss() {
-      if (!isPlaying) return;
-      let x = 0;
-      let z = -(ARENA_SIZE / 2) + 2;
-
-      const bossGeo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
-      const bossMat = new THREE.MeshPhongMaterial({ color: 0x8b5cf6 });
-      const mesh = new THREE.Mesh(bossGeo, bossMat);
-      mesh.position.set(x, 1.2, z);
-      scene.add(mesh);
-
-      let bossHp = (gameMode === "NIGHTMARE") ? 8 : 5;
-      bots.push({ mesh: mesh, speed: 0.05, hp: bossHp, isBoss: true, lastShoot: Date.now() });
+      bots.push({ mesh: mesh, speed: 0.08, hp: 1, lastShoot: Date.now() });
     }
 
     function playerShoot() {
@@ -579,46 +562,42 @@
 
       const now = Date.now();
       const cooldown = (currentWeapon === "BAZOKA") ? 1000 : 250;
-      
       if (now - lastShootTime < cooldown) return;
       lastShootTime = now;
 
       let mag = Math.hypot(lastMoveDir.x, lastMoveDir.z) || 1;
+      let dx = (lastMoveDir.x / mag) * (currentWeapon === "BAZOKA" ? 0.22 : 0.45);
+      let dz = (lastMoveDir.z / mag) * (currentWeapon === "BAZOKA" ? 0.22 : 0.45);
 
-      if (currentWeapon === "PISTOL") {
-        let dx = (lastMoveDir.x / mag) * 0.45;
-        let dz = (lastMoveDir.z / mag) * 0.45;
+      const bGeo = new THREE.SphereGeometry(currentWeapon === "BAZOKA" ? 0.5 : 0.25, 8, 8);
+      const bMat = new THREE.MeshBasicMaterial({ color: currentWeapon === "BAZOKA" ? 0xf97316 : 0xfacc15 });
+      const mesh = new THREE.Mesh(bGeo, bMat);
+      mesh.position.set(playerMesh.position.x, 0.6, playerMesh.position.z);
+      scene.add(mesh);
 
-        const bGeo = new THREE.SphereGeometry(0.25, 8, 8);
-        const bMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-        const mesh = new THREE.Mesh(bGeo, bMat);
-        mesh.position.set(playerMesh.position.x, 0.6, playerMesh.position.z);
-        scene.add(mesh);
+      bullets.push({ mesh: mesh, dx: dx, dz: dz, type: currentWeapon });
 
-        bullets.push({ mesh: mesh, dx: dx, dz: dz, type: "PISTOL" });
-
-      } else if (currentWeapon === "BAZOKA") {
-        let dx = (lastMoveDir.x / mag) * 0.22;
-        let dz = (lastMoveDir.z / mag) * 0.22;
-
-        const bGeo = new THREE.SphereGeometry(0.5, 10, 10);
-        const bMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
-        const mesh = new THREE.Mesh(bGeo, bMat);
-        mesh.position.set(playerMesh.position.x, 0.6, playerMesh.position.z);
-        scene.add(mesh);
-
-        bullets.push({ mesh: mesh, dx: dx, dz: dz, type: "BAZOKA" });
+      // Send to Firebase
+      if (roomRef) {
+        roomRef.child('bullets').push({
+          x: playerMesh.position.x,
+          z: playerMesh.position.z,
+          dx: dx,
+          dz: dz,
+          type: currentWeapon,
+          owner: playerRole
+        });
       }
     }
 
-    function createExplosion(x, z) {
-      const expGeo = new THREE.SphereGeometry(3.2, 12, 12);
-      const expMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.8 });
-      const expMesh = new THREE.Mesh(expGeo, expMat);
-      expMesh.position.set(x, 0.6, z);
-      scene.add(expMesh);
+    function spawnRemoteBullet(b) {
+      const bGeo = new THREE.SphereGeometry(b.type === "BAZOKA" ? 0.5 : 0.25, 8, 8);
+      const bMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+      const mesh = new THREE.Mesh(bGeo, bMat);
+      mesh.position.set(b.x, 0.6, b.z);
+      scene.add(mesh);
 
-      explosions.push({ mesh: expMesh, scale: 1, opacity: 0.8 });
+      bullets.push({ mesh: mesh, dx: b.dx, dz: b.dz, type: b.type });
     }
 
     function updateGameLogic() {
@@ -639,78 +618,45 @@
 
         let angle = Math.atan2(moveX, moveZ);
         playerMesh.rotation.y = angle + Math.PI;
+
+        // Broadcast Posisi
+        if (roomRef) {
+          roomRef.child(playerRole).update({
+            x: playerMesh.position.x,
+            z: playerMesh.position.z
+          });
+        }
       }
 
       const limit = (ARENA_SIZE / 2) - 1;
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
-      // Visual Ledakan
-      explosions.forEach((exp, i) => {
-        exp.scale += 0.06;
-        exp.opacity -= 0.08;
-        exp.mesh.scale.set(exp.scale, exp.scale, exp.scale);
-        exp.mesh.material.opacity = exp.opacity;
-
-        if (exp.opacity <= 0) {
-          scene.remove(exp.mesh);
-          explosions.splice(i, 1);
-        }
-      });
-
-      // Spawn Boss
-      if (kills >= nextBossThreshold) {
-        spawnBoss();
-        nextBossThreshold += 5;
-      }
-
-      // Peluru Pemain & Deteksi Hit
+      // Update Peluru
       bullets.forEach((b, index) => {
         b.mesh.position.x += b.dx;
         b.mesh.position.z += b.dz;
 
-        let hitBot = false;
-
         bots.forEach((bot, bIndex) => {
-          let hitRadius = bot.isBoss ? 1.5 : 0.9;
           let dist = b.mesh.position.distanceTo(bot.mesh.position);
-
-          if (dist < hitRadius) {
-            hitBot = true;
-
-            if (b.type === "PISTOL") {
-              bot.hp -= 1;
-              if (bot.hp <= 0) {
-                scene.remove(bot.mesh);
-                bots.splice(bIndex, 1);
-                kills += bot.isBoss ? 3 : 1;
-              }
-            } else if (b.type === "BAZOKA") {
-              createExplosion(b.mesh.position.x, b.mesh.position.z);
-
-              for (let j = bots.length - 1; j >= 0; j--) {
-                let distToExplosion = b.mesh.position.distanceTo(bots[j].mesh.position);
-                if (distToExplosion <= 4.5) {
-                  bots[j].hp -= 4;
-                  if (bots[j].hp <= 0) {
-                    scene.remove(bots[j].mesh);
-                    bots.splice(j, 1);
-                    kills += bots[j]?.isBoss ? 3 : 1;
-                  }
-                }
-              }
-            }
+          if (dist < 0.9) {
+            scene.remove(bot.mesh);
+            bots.splice(bIndex, 1);
+            scene.remove(b.mesh);
+            bullets.splice(index, 1);
+            kills++;
             killsEl.innerText = kills;
+            if (playerRole === 'p1' && roomRef) roomRef.update({ kills: kills });
           }
         });
 
-        if (hitBot || Math.abs(b.mesh.position.x) > limit || Math.abs(b.mesh.position.z) > limit) {
+        if (Math.abs(b.mesh.position.x) > limit || Math.abs(b.mesh.position.z) > limit) {
           scene.remove(b.mesh);
           bullets.splice(index, 1);
         }
       });
 
-      // Gerak & Tembakan Bot Musuh
+      // Update Musuh (Host Only Logic)
       bots.forEach((bot) => {
         let dx = playerMesh.position.x - bot.mesh.position.x;
         let dz = playerMesh.position.z - bot.mesh.position.z;
@@ -719,76 +665,7 @@
         bot.mesh.position.x += Math.sin(angle) * bot.speed;
         bot.mesh.position.z += Math.cos(angle) * bot.speed;
         bot.mesh.rotation.y = angle;
-
-        let shootRate = (gameMode === "NIGHTMARE") ? 900 : 1500;
-        if (bot.isBoss) shootRate = (gameMode === "NIGHTMARE") ? 800 : 1200;
-
-        if (Date.now() - bot.lastShoot > shootRate) {
-          if (bot.isBoss) {
-            [-0.35, 0, 0.35].forEach((spreadAngle) => {
-              const bbGeo = new THREE.SphereGeometry(0.3, 8, 8);
-              const bbMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
-              const bbMesh = new THREE.Mesh(bbGeo, bbMat);
-              bbMesh.position.set(bot.mesh.position.x, 1.2, bot.mesh.position.z);
-              scene.add(bbMesh);
-
-              let bSpeed = (gameMode === "NIGHTMARE") ? 0.3 : 0.22;
-              botBullets.push({
-                mesh: bbMesh,
-                dx: Math.sin(angle + spreadAngle) * bSpeed,
-                dz: Math.cos(angle + spreadAngle) * bSpeed
-              });
-            });
-          } else {
-            const bbGeo = new THREE.SphereGeometry(0.2, 8, 8);
-            const bbMat = new THREE.MeshBasicMaterial({ color: 0xfb923c });
-            const bbMesh = new THREE.Mesh(bbGeo, bbMat);
-            bbMesh.position.set(bot.mesh.position.x, 0.6, bot.mesh.position.z);
-            scene.add(bbMesh);
-
-            let bSpeed = (gameMode === "NIGHTMARE") ? 0.32 : 0.25;
-            botBullets.push({
-              mesh: bbMesh,
-              dx: Math.sin(angle) * bSpeed,
-              dz: Math.cos(angle) * bSpeed
-            });
-          }
-          bot.lastShoot = Date.now();
-        }
       });
-
-      // Peluru Musuh
-      botBullets.forEach((bb, index) => {
-        bb.mesh.position.x += bb.dx;
-        bb.mesh.position.z += bb.dz;
-
-        let dist = bb.mesh.position.distanceTo(playerMesh.position);
-        if (dist < 0.8) {
-          scene.remove(bb.mesh);
-          botBullets.splice(index, 1);
-          playerHP -= (gameMode === "NIGHTMARE") ? 15 : 10;
-          hpEl.innerText = playerHP;
-
-          if (playerHP <= 0) gameOver();
-        }
-
-        if (Math.abs(bb.mesh.position.x) > limit || Math.abs(bb.mesh.position.z) > limit) {
-          scene.remove(bb.mesh);
-          botBullets.splice(index, 1);
-        }
-      });
-    }
-
-    function gameOver() {
-      isPlaying = false;
-      clearInterval(botSpawner);
-      if (autoShootInterval) clearInterval(autoShootInterval);
-      
-      saveScore(playerName, kills, gameMode);
-      
-      msgTitle.innerText = "KAMU GUGUR!";
-      startBtn.innerText = "MAIN LAGI 🔄";
-      overlay.style.display = "flex";
     }
 
     function animate() {
@@ -798,7 +675,6 @@
     }
 
     init3D();
-    loadLeaderboard('NORMAL');
   </script>
 </body>
 </html>
