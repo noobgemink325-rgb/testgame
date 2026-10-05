@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Co-Op Multiplayer</title>
+  <title>Bot War Arena 3D - Fixed Co-Op HP & Game Over</title>
   <style>
     * {
       box-sizing: border-box;
@@ -117,7 +117,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 10px;
+      margin-top: 8px;
       padding: 0 10px;
     }
     #joystick-container {
@@ -176,23 +176,29 @@
       text-align: center;
     }
 
-    .status-box {
+    .leaderboard-box {
       width: 340px;
-      margin-top: 8px;
+      margin-top: 6px;
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 8px;
       padding: 6px 12px;
-      font-size: 11px;
-      text-align: center;
-      color: #38bdf8;
     }
+    .leaderboard-title {
+      font-size: 11px;
+      color: #facc15;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+    ol { padding-left: 18px; font-size: 11px; color: #cbd5e1; }
+    li { margin-bottom: 1px; }
+    .no-data { color: #64748b; font-size: 10px; text-align: center; }
   </style>
 
-  <!-- Library Three.js 3D -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <!-- Library Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
@@ -200,8 +206,8 @@
 
   <h1>WAR ARENA 3D 💣</h1>
   <div class="score-board">
-    Kill Total: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | 
-    HP: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span> | 
+    Kill Tim: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | 
+    HP Kamu: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span> | 
     Room: <span id="room-display" style="color:#facc15; font-weight:bold;">-</span>
   </div>
 
@@ -233,8 +239,11 @@
     </div>
   </div>
 
-  <div class="status-box" id="status-text">
-    Status: Silakan Buat atau Masuk ke Room
+  <div class="leaderboard-box">
+    <div class="leaderboard-title">🏆 TOP TIM CO-OP GLOBAL</div>
+    ol id="leaderboard-list">
+      <p class="no-data">Memuat leaderboard tim...</p>
+    </ol>
   </div>
 
   <script>
@@ -254,17 +263,50 @@
     const db = firebase.database();
 
     let roomId = null;
-    let playerRole = null; // 'p1' (Host) atau 'p2' (Joiner)
+    let playerRole = null;
     let roomRef = null;
+    let p1Name = "P1", p2Name = "P2";
+    let lastHitTime = 0;
+
+    function loadCoopLeaderboard() {
+      db.ref('leaderboard_coop').orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
+        const list = document.getElementById("leaderboard-list");
+        list.innerHTML = "";
+        let scores = [];
+        snapshot.forEach((child) => scores.push(child.val()));
+        scores.sort((a, b) => b.kills - a.kills);
+
+        if (scores.length === 0) {
+          list.innerHTML = `<p class="no-data">Belum ada rekor tim. Jadi yang pertama!</p>`;
+          return;
+        }
+
+        scores.forEach((item) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<b>${item.team}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
+          list.appendChild(li);
+        });
+      });
+    }
+
+    function saveCoopScore(teamName, killCount) {
+      if (killCount === 0) return;
+      db.ref('leaderboard_coop').push({
+        team: teamName,
+        kills: killCount,
+        timestamp: Date.now()
+      });
+    }
 
     function createRoom() {
       roomId = Math.floor(1000 + Math.random() * 9000).toString();
       playerRole = 'p1';
+      p1Name = document.getElementById('player-name').value.trim() || 'P1';
       roomRef = db.ref(`rooms/${roomId}`);
 
       roomRef.set({
         status: 'waiting',
-        p1: { name: document.getElementById('player-name').value || 'P1', x: -2, z: 0, hp: 100 },
+        p1: { name: p1Name, x: -2, z: 0, hp: 100 },
         p2: { name: 'Menunggu...', x: 2, z: 0, hp: 100 },
         kills: 0
       });
@@ -272,7 +314,6 @@
       document.getElementById('room-display').innerText = roomId;
       document.getElementById('room-info').innerText = `Kode Room: ${roomId} (Bagikan ke teman!)`;
       document.getElementById('start-btn').style.display = 'block';
-      document.getElementById('status-text').innerText = `Room ${roomId} dibuat. Menunggu Player 2...`;
 
       listenToRoom();
     }
@@ -288,18 +329,19 @@
       if (!roomId) return alert("Masukkan kode room!");
 
       playerRole = 'p2';
+      p2Name = document.getElementById('player-name').value.trim() || 'P2';
       roomRef = db.ref(`rooms/${roomId}`);
 
       roomRef.get().then((snapshot) => {
         if (snapshot.exists()) {
+          p1Name = snapshot.val().p1.name;
           roomRef.child('p2').set({
-            name: document.getElementById('player-name').value || 'P2',
+            name: p2Name,
             x: 2,
             z: 0,
             hp: 100
           });
           document.getElementById('room-display').innerText = roomId;
-          document.getElementById('status-text').innerText = `Berhasil Join Room ${roomId}! Menunggu Host...`;
           listenToRoom();
         } else {
           alert("Room tidak ditemukan!");
@@ -312,16 +354,19 @@
         const data = snapshot.val();
         if (!data) return;
 
-        // Sync posisi Player Lain
+        if (data.p1) p1Name = data.p1.name;
+        if (data.p2) p2Name = data.p2.name;
+
         const otherRole = playerRole === 'p1' ? 'p2' : 'p1';
         if (data[otherRole] && otherPlayerMesh) {
           otherPlayerMesh.position.x = data[otherRole].x;
           otherPlayerMesh.position.z = data[otherRole].z;
         }
 
-        // Sync Status Game
         if (data.status === 'playing' && !isPlaying) {
           startGameLocal();
+        } else if (data.status === 'gameover' && isPlaying) {
+          triggerLocalGameOver();
         }
 
         if (data.kills !== undefined) {
@@ -330,7 +375,22 @@
         }
       });
 
-      // Tembakan Teman
+      roomRef.child('bots').on('child_added', (snapshot) => {
+        if (playerRole === 'p2') {
+          const bData = snapshot.val();
+          spawnRemoteBot(snapshot.key, bData.x, bData.z);
+        }
+      });
+
+      roomRef.child('bots').on('child_removed', (snapshot) => {
+        const key = snapshot.key;
+        const bIndex = bots.findIndex(b => b.key === key);
+        if (bIndex !== -1) {
+          scene.remove(bots[bIndex].mesh);
+          bots.splice(bIndex, 1);
+        }
+      });
+
       roomRef.child('bullets').on('child_added', (snapshot) => {
         const b = snapshot.val();
         if (b.owner !== playerRole) {
@@ -352,7 +412,7 @@
 
     let scene, camera, renderer;
     let playerMesh, otherPlayerMesh, playerHP = 100, kills = 0, isPlaying = false;
-    let bullets = [], botBullets = [], bots = [], explosions = [];
+    let bullets = [], botBullets = [], bots = [];
     let keys = {}, lastMoveDir = { x: 0, z: -1 }, joystickDir = { x: 0, y: 0 };
     let botSpawner, autoShootInterval, autoShoot = false;
     let currentWeapon = "PISTOL";
@@ -384,12 +444,10 @@
       gridHelper.position.y = -0.5;
       scene.add(gridHelper);
 
-      // Karakter Utama (Biru / Hijau)
-      playerMesh = createPlayerMesh(playerRole === 'p2' ? 0x22c55e : 0x38bdf8);
+      playerMesh = createPlayerMesh(0x38bdf8);
       scene.add(playerMesh);
 
-      // Karakter Teman
-      otherPlayerMesh = createPlayerMesh(playerRole === 'p2' ? 0x38bdf8 : 0x22c55e);
+      otherPlayerMesh = createPlayerMesh(0x22c55e);
       scene.add(otherPlayerMesh);
 
       animate();
@@ -515,7 +573,7 @@
 
     function startGame() {
       if (playerRole === 'p1') {
-        roomRef.update({ status: 'playing' });
+        roomRef.update({ status: 'playing', kills: 0, bots: null, bullets: null });
       }
     }
 
@@ -533,28 +591,33 @@
       killsEl.innerText = kills;
       hpEl.innerText = playerHP;
       overlay.style.display = "none";
-      document.getElementById('status-text').innerText = "Status: Game Berlangsung 🔥";
 
-      // Host yang spawn musuh
       if (playerRole === 'p1') {
         if (botSpawner) clearInterval(botSpawner);
-        botSpawner = setInterval(spawnBot, 1800);
+        botSpawner = setInterval(spawnBotHost, 1500);
       }
     }
 
-    function spawnBot() {
+    function spawnBotHost() {
       if (!isPlaying || playerRole !== 'p1') return;
       let side = Math.random() < 0.5 ? -1 : 1;
       let x = (Math.random() - 0.5) * ARENA_SIZE;
       let z = side * (ARENA_SIZE / 2);
 
+      const botRef = roomRef.child('bots').push();
+      botRef.set({ x: x, z: z });
+
+      spawnRemoteBot(botRef.key, x, z);
+    }
+
+    function spawnRemoteBot(key, x, z) {
       const botGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
       const botMat = new THREE.MeshPhongMaterial({ color: 0xef4444 });
       const mesh = new THREE.Mesh(botGeo, botMat);
       mesh.position.set(x, 0.6, z);
       scene.add(mesh);
 
-      bots.push({ mesh: mesh, speed: 0.08, hp: 1, lastShoot: Date.now() });
+      bots.push({ key: key, mesh: mesh, speed: 0.08 });
     }
 
     function playerShoot() {
@@ -577,7 +640,6 @@
 
       bullets.push({ mesh: mesh, dx: dx, dz: dz, type: currentWeapon });
 
-      // Send to Firebase
       if (roomRef) {
         roomRef.child('bullets').push({
           x: playerMesh.position.x,
@@ -619,7 +681,6 @@
         let angle = Math.atan2(moveX, moveZ);
         playerMesh.rotation.y = angle + Math.PI;
 
-        // Broadcast Posisi
         if (roomRef) {
           roomRef.child(playerRole).update({
             x: playerMesh.position.x,
@@ -632,21 +693,22 @@
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
-      // Update Peluru
+      // Peluru & Deteksi Hit Musuh
       bullets.forEach((b, index) => {
         b.mesh.position.x += b.dx;
         b.mesh.position.z += b.dz;
 
-        bots.forEach((bot, bIndex) => {
+        bots.forEach((bot) => {
           let dist = b.mesh.position.distanceTo(bot.mesh.position);
           if (dist < 0.9) {
-            scene.remove(bot.mesh);
-            bots.splice(bIndex, 1);
+            if (playerRole === 'p1') {
+              roomRef.child(`bots/${bot.key}`).remove();
+            }
             scene.remove(b.mesh);
             bullets.splice(index, 1);
             kills++;
             killsEl.innerText = kills;
-            if (playerRole === 'p1' && roomRef) roomRef.update({ kills: kills });
+            if (roomRef) roomRef.update({ kills: kills });
           }
         });
 
@@ -656,16 +718,51 @@
         }
       });
 
-      // Update Musuh (Host Only Logic)
+      // Pergerakan Musuh & Sistem Kena Hit (Bisa Mati)
+      const now = Date.now();
       bots.forEach((bot) => {
-        let dx = playerMesh.position.x - bot.mesh.position.x;
-        let dz = playerMesh.position.z - bot.mesh.position.z;
+        let distP1 = bot.mesh.position.distanceTo(playerMesh.position);
+        let distP2 = bot.mesh.position.distanceTo(otherPlayerMesh.position);
+        let target = distP1 < distP2 ? playerMesh.position : otherPlayerMesh.position;
+
+        let dx = target.x - bot.mesh.position.x;
+        let dz = target.z - bot.mesh.position.z;
         let angle = Math.atan2(dx, dz);
 
         bot.mesh.position.x += Math.sin(angle) * bot.speed;
         bot.mesh.position.z += Math.cos(angle) * bot.speed;
         bot.mesh.rotation.y = angle;
+
+        // Deteksi tabrakan bot ke player (Darah Berkurang + Kebal 800ms)
+        if (distP1 < 0.8 && now - lastHitTime > 800) {
+          lastHitTime = now;
+          playerHP -= 20;
+          if (playerHP < 0) playerHP = 0;
+          hpEl.innerText = playerHP;
+
+          if (playerHP <= 0 && isPlaying) {
+            triggerGlobalGameOver();
+          }
+        }
       });
+    }
+
+    function triggerGlobalGameOver() {
+      if (roomRef) {
+        roomRef.update({ status: 'gameover' });
+      }
+    }
+
+    function triggerLocalGameOver() {
+      isPlaying = false;
+      clearInterval(botSpawner);
+
+      const teamName = `${p1Name} & ${p2Name}`;
+      if (playerRole === 'p1') saveCoopScore(teamName, kills);
+
+      msgTitle.innerText = "TIM KAMU GUGUR!";
+      startBtn.innerText = "MAIN LAGI 🔄";
+      overlay.style.display = "flex";
     }
 
     function animate() {
@@ -675,6 +772,7 @@
     }
 
     init3D();
+    loadCoopLeaderboard();
   </script>
 </body>
 </html>
