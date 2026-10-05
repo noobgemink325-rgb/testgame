@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Instant Global Leaderboard</title>
+  <title>Bot War Arena 3D</title>
   <style>
     * {
       box-sizing: border-box;
@@ -165,7 +165,7 @@
     .no-data { color: #64748b; font-size: 11px; text-align: center; }
   </style>
 
-  <!-- Three.js 3D Engine -->
+  <!-- Library Three.js 3D -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -175,7 +175,7 @@
 
   <div id="game-container">
     <div id="overlay">
-      <h2 id="msg-title" style="margin-bottom: 10px; color: #ef4444;">GLOBAL ARENA 3D</h2>
+      <h2 id="msg-title" style="margin-bottom: 10px; color: #ef4444;">BOT WAR ARENA 3D</h2>
       <input type="text" id="player-name" placeholder="Masukkan Nickname..." maxlength="12">
       <button id="start-btn" onclick="startGame()">MULAI PERANG 💣</button>
     </div>
@@ -193,72 +193,40 @@
   </div>
 
   <div class="leaderboard-box">
-    <div class="leaderboard-title">🌐 LEADERBOARD GLOBAL (ALL PLAYER)</div>
+    <div class="leaderboard-title">🏆 LEADERBOARD TOP KILL</div>
     <ol id="leaderboard-list">
-      <p class="no-data">Memuat data global...</p>
+      <p class="no-data">Belum ada skor tercatat.</p>
     </ol>
   </div>
 
   <script>
-    // --- GLOBAL LEADERBOARD DB INSTAN (Mantle API) ---
-    const DB_ENDPOINT = "https://mantledb.sh/v2/botwar-arena-global-v1/leaderboard";
+    // --- PENYIMPANAN LEADERBOARD STABIL ---
     const leaderboardList = document.getElementById("leaderboard-list");
 
-    async function loadGlobalLeaderboard() {
-      try {
-        const response = await fetch(DB_ENDPOINT);
-        if (!response.ok) throw new Error();
-        const data = await response.json();
-        
-        let scores = Array.isArray(data) ? data : [];
-        leaderboardList.innerHTML = "";
+    function loadLeaderboard() {
+      const scores = JSON.parse(localStorage.getItem("war_3d_scores") || "[]");
+      leaderboardList.innerHTML = "";
 
-        if (scores.length === 0) {
-          leaderboardList.innerHTML = `<p class="no-data">Belum ada skor global. Jadilah nomor 1!</p>`;
-          return;
-        }
-
-        // Urutkan dari Kill Terbanyak (Top 5)
-        scores.sort((a, b) => b.kills - a.kills);
-        scores = scores.slice(0, 5);
-
-        scores.forEach((item) => {
-          const li = document.createElement("li");
-          li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
-          leaderboardList.appendChild(li);
-        });
-      } catch (err) {
-        leaderboardList.innerHTML = `<p class="no-data">Gagal memuat data global.</p>`;
+      if (scores.length === 0) {
+        leaderboardList.innerHTML = `<p class="no-data">Belum ada skor. Jadilah nomor 1!</p>`;
+        return;
       }
+
+      scores.forEach((item) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
+        leaderboardList.appendChild(li);
+      });
     }
 
-    async function saveGlobalScore(name, killCount) {
+    function saveScore(name, killCount) {
       if (killCount === 0) return;
-      try {
-        // Ambil data lama
-        const response = await fetch(DB_ENDPOINT);
-        let scores = [];
-        if (response.ok) {
-          const current = await response.json();
-          if (Array.isArray(current)) scores = current;
-        }
-
-        // Tambah data baru
-        scores.push({ name: name, kills: killCount, date: Date.now() });
-        scores.sort((a, b) => b.kills - a.kills);
-        scores = scores.slice(0, 10); // Simpan 10 skor teratas
-
-        // Push update ke cloud
-        await fetch(DB_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(scores)
-        });
-
-        loadGlobalLeaderboard();
-      } catch (err) {
-        console.log("Error saving score", err);
-      }
+      let scores = JSON.parse(localStorage.getItem("war_3d_scores") || "[]");
+      scores.push({ name: name, kills: killCount });
+      scores.sort((a, b) => b.kills - a.kills);
+      scores = scores.slice(0, 5); // Ambil Top 5
+      localStorage.setItem("war_3d_scores", JSON.stringify(scores));
+      loadLeaderboard();
     }
 
     // --- GAME ENGINE 3D ---
@@ -556,7 +524,7 @@
       clearInterval(botSpawner);
       if (autoShootInterval) clearInterval(autoShootInterval);
       
-      saveGlobalScore(playerName, kills);
+      saveScore(playerName, kills);
       
       msgTitle.innerText = "KAMU GUGUR!";
       startBtn.innerText = "MAIN LAGI 🔄";
@@ -570,7 +538,7 @@
     }
 
     init3D();
-    loadGlobalLeaderboard();
+    loadLeaderboard();
   </script>
 </body>
 </html>
