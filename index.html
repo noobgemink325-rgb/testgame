@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Fixed Co-Op HP & Game Over</title>
+  <title>Bot War Arena 3D - Fixed Co-Op HP & Solo Mode</title>
   <style>
     * {
       box-sizing: border-box;
@@ -64,6 +64,28 @@
       justify-content: center;
       z-index: 10;
       padding: 15px;
+    }
+    .mode-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      width: 85%;
+    }
+    .btn-tab {
+      flex: 1;
+      padding: 6px;
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+    .btn-tab.active {
+      background: #22c55e;
+      color: #fff;
+      border-color: #4ade80;
     }
     input[type="text"] {
       padding: 8px;
@@ -213,15 +235,24 @@
 
   <div id="game-container">
     <div id="overlay">
+      <!-- TAB MODE SELECTOR -->
+      <div class="mode-tabs">
+        <button id="tab-solo-btn" class="btn-tab" onclick="switchGameMode('solo')">SOLO PLAYER</button>
+        <button id="tab-coop-btn" class="btn-tab active" onclick="switchGameMode('coop')">CO-OP MULTIPLAYER</button>
+      </div>
+
       <h2 id="msg-title" style="margin-bottom: 6px; color: #ef4444;">CO-OP MULTIPLAYER</h2>
       <input type="text" id="player-name" placeholder="Masukkan Nickname..." maxlength="12">
       
-      <div class="room-group">
-        <button class="btn-room" onclick="createRoom()">BUAT ROOM ➕</button>
-        <button class="btn-room btn-room-secondary" onclick="joinRoomPrompt()">JOIN ROOM 🔗</button>
+      <!-- CONTROLS CO-OP -->
+      <div id="coop-controls" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <div class="room-group">
+          <button class="btn-room" onclick="createRoom()">BUAT ROOM ➕</button>
+          <button class="btn-room btn-room-secondary" onclick="joinRoomPrompt()">JOIN ROOM 🔗</button>
+        </div>
+        <input type="text" id="room-code-input" placeholder="Kode Room (4 Digit)" maxlength="4" style="display:none;">
       </div>
 
-      <input type="text" id="room-code-input" placeholder="Kode Room (4 Digit)" maxlength="4" style="display:none;">
       <button id="start-btn" onclick="startGame()" style="display:none;">MULAI CO-OP 🚀</button>
       <p id="room-info" style="font-size:11px; color:#94a3b8; margin-top:4px;"></p>
     </div>
@@ -239,10 +270,11 @@
     </div>
   </div>
 
+  <!-- FIX BUG TAG HTML LEADERBOARD -->
   <div class="leaderboard-box">
-    <div class="leaderboard-title">🏆 TOP TIM CO-OP GLOBAL</div>
-    ol id="leaderboard-list">
-      <p class="no-data">Memuat leaderboard tim...</p>
+    <div id="lb-title-text" class="leaderboard-title">🏆 TOP TIM CO-OP GLOBAL</div>
+    <ol id="leaderboard-list">
+      <p class="no-data">Memuat leaderboard...</p>
     </ol>
   </div>
 
@@ -262,14 +294,52 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    let gameMode = 'coop'; // 'solo' atau 'coop'
     let roomId = null;
     let playerRole = null;
     let roomRef = null;
     let p1Name = "P1", p2Name = "P2";
     let lastHitTime = 0;
 
+    // --- SWITCH MODE SOLO / CO-OP ---
+    function switchGameMode(mode) {
+      gameMode = mode;
+      const tabSolo = document.getElementById("tab-solo-btn");
+      const tabCoop = document.getElementById("tab-coop-btn");
+      const coopControls = document.getElementById("coop-controls");
+      const msgTitle = document.getElementById("msg-title");
+      const startBtn = document.getElementById("start-btn");
+      const roomInfo = document.getElementById("room-info");
+      const lbTitle = document.getElementById("lb-title-text");
+
+      if (mode === 'solo') {
+        tabSolo.classList.add("active");
+        tabCoop.classList.remove("active");
+        coopControls.style.display = "none";
+        msgTitle.innerText = "SOLO PLAYER";
+        msgTitle.style.color = "#22c55e";
+        startBtn.innerText = "MAIN SOLO 🚀";
+        startBtn.style.display = "block";
+        roomInfo.innerText = "Mode Solo: Bermain sendiri lawan Bot!";
+        lbTitle.innerText = "🏆 TOP SOLO GLOBAL";
+        loadSoloLeaderboard();
+      } else {
+        tabCoop.classList.add("active");
+        tabSolo.classList.remove("active");
+        coopControls.style.display = "flex";
+        msgTitle.innerText = "CO-OP MULTIPLAYER";
+        msgTitle.style.color = "#ef4444";
+        startBtn.innerText = "MULAI CO-OP 🚀";
+        startBtn.style.display = roomId ? "block" : "none";
+        roomInfo.innerText = "";
+        lbTitle.innerText = "🏆 TOP TIM CO-OP GLOBAL";
+        loadCoopLeaderboard();
+      }
+    }
+
     function loadCoopLeaderboard() {
       db.ref('leaderboard_coop').orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
+        if (gameMode !== 'coop') return;
         const list = document.getElementById("leaderboard-list");
         list.innerHTML = "";
         let scores = [];
@@ -289,10 +359,41 @@
       });
     }
 
+    function loadSoloLeaderboard() {
+      db.ref('leaderboard_solo').orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
+        if (gameMode !== 'solo') return;
+        const list = document.getElementById("leaderboard-list");
+        list.innerHTML = "";
+        let scores = [];
+        snapshot.forEach((child) => scores.push(child.val()));
+        scores.sort((a, b) => b.kills - a.kills);
+
+        if (scores.length === 0) {
+          list.innerHTML = `<p class="no-data">Belum ada rekor Solo. Raih Kill terbanyak!</p>`;
+          return;
+        }
+
+        scores.forEach((item) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
+          list.appendChild(li);
+        });
+      });
+    }
+
     function saveCoopScore(teamName, killCount) {
       if (killCount === 0) return;
       db.ref('leaderboard_coop').push({
         team: teamName,
+        kills: killCount,
+        timestamp: Date.now()
+      });
+    }
+
+    function saveSoloScore(playerName, killCount) {
+      if (killCount === 0) return;
+      db.ref('leaderboard_solo').push({
+        name: playerName,
         kills: killCount,
         timestamp: Date.now()
       });
@@ -350,9 +451,10 @@
     }
 
     function listenToRoom() {
+      if (!roomRef) return;
       roomRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        if (!data) return;
+        if (!data || gameMode === 'solo') return;
 
         if (data.p1) p1Name = data.p1.name;
         if (data.p2) p2Name = data.p2.name;
@@ -376,25 +478,29 @@
       });
 
       roomRef.child('bots').on('child_added', (snapshot) => {
-        if (playerRole === 'p2') {
+        if (gameMode === 'coop' && playerRole === 'p2') {
           const bData = snapshot.val();
           spawnRemoteBot(snapshot.key, bData.x, bData.z);
         }
       });
 
       roomRef.child('bots').on('child_removed', (snapshot) => {
-        const key = snapshot.key;
-        const bIndex = bots.findIndex(b => b.key === key);
-        if (bIndex !== -1) {
-          scene.remove(bots[bIndex].mesh);
-          bots.splice(bIndex, 1);
+        if (gameMode === 'coop') {
+          const key = snapshot.key;
+          const bIndex = bots.findIndex(b => b.key === key);
+          if (bIndex !== -1) {
+            scene.remove(bots[bIndex].mesh);
+            bots.splice(bIndex, 1);
+          }
         }
       });
 
       roomRef.child('bullets').on('child_added', (snapshot) => {
-        const b = snapshot.val();
-        if (b.owner !== playerRole) {
-          spawnRemoteBullet(b);
+        if (gameMode === 'coop') {
+          const b = snapshot.val();
+          if (b.owner !== playerRole) {
+            spawnRemoteBullet(b);
+          }
         }
       });
     }
@@ -572,7 +678,11 @@
     }
 
     function startGame() {
-      if (playerRole === 'p1') {
+      if (gameMode === 'solo') {
+        playerRole = 'p1';
+        document.getElementById('room-display').innerText = 'SOLO';
+        startGameLocal();
+      } else if (playerRole === 'p1' && roomRef) {
         roomRef.update({ status: 'playing', kills: 0, bots: null, bullets: null });
       }
     }
@@ -588,26 +698,36 @@
       bullets = []; botBullets = []; bots = [];
 
       playerMesh.position.set(playerRole === 'p1' ? -2 : 2, 0.6, 0);
+      
+      if (gameMode === 'solo') {
+        otherPlayerMesh.visible = false;
+      } else {
+        otherPlayerMesh.visible = true;
+      }
+
       killsEl.innerText = kills;
       hpEl.innerText = playerHP;
       overlay.style.display = "none";
 
-      if (playerRole === 'p1') {
-        if (botSpawner) clearInterval(botSpawner);
+      if (botSpawner) clearInterval(botSpawner);
+      if (gameMode === 'solo' || playerRole === 'p1') {
         botSpawner = setInterval(spawnBotHost, 1500);
       }
     }
 
     function spawnBotHost() {
-      if (!isPlaying || playerRole !== 'p1') return;
+      if (!isPlaying) return;
       let side = Math.random() < 0.5 ? -1 : 1;
       let x = (Math.random() - 0.5) * ARENA_SIZE;
       let z = side * (ARENA_SIZE / 2);
 
-      const botRef = roomRef.child('bots').push();
-      botRef.set({ x: x, z: z });
-
-      spawnRemoteBot(botRef.key, x, z);
+      if (gameMode === 'solo') {
+        spawnRemoteBot(Date.now().toString(), x, z);
+      } else if (playerRole === 'p1' && roomRef) {
+        const botRef = roomRef.child('bots').push();
+        botRef.set({ x: x, z: z });
+        spawnRemoteBot(botRef.key, x, z);
+      }
     }
 
     function spawnRemoteBot(key, x, z) {
@@ -640,7 +760,7 @@
 
       bullets.push({ mesh: mesh, dx: dx, dz: dz, type: currentWeapon });
 
-      if (roomRef) {
+      if (gameMode === 'coop' && roomRef) {
         roomRef.child('bullets').push({
           x: playerMesh.position.x,
           z: playerMesh.position.z,
@@ -681,7 +801,7 @@
         let angle = Math.atan2(moveX, moveZ);
         playerMesh.rotation.y = angle + Math.PI;
 
-        if (roomRef) {
+        if (gameMode === 'coop' && roomRef) {
           roomRef.child(playerRole).update({
             x: playerMesh.position.x,
             z: playerMesh.position.z
@@ -698,17 +818,20 @@
         b.mesh.position.x += b.dx;
         b.mesh.position.z += b.dz;
 
-        bots.forEach((bot) => {
+        bots.forEach((bot, bIdx) => {
           let dist = b.mesh.position.distanceTo(bot.mesh.position);
           if (dist < 0.9) {
-            if (playerRole === 'p1') {
+            if (gameMode === 'solo') {
+              scene.remove(bot.mesh);
+              bots.splice(bIdx, 1);
+            } else if (playerRole === 'p1' && roomRef) {
               roomRef.child(`bots/${bot.key}`).remove();
             }
             scene.remove(b.mesh);
             bullets.splice(index, 1);
             kills++;
             killsEl.innerText = kills;
-            if (roomRef) roomRef.update({ kills: kills });
+            if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
           }
         });
 
@@ -718,11 +841,11 @@
         }
       });
 
-      // Pergerakan Musuh & Sistem Kena Hit (Bisa Mati)
+      // Pergerakan Musuh & Sistem Kena Hit
       const now = Date.now();
       bots.forEach((bot) => {
         let distP1 = bot.mesh.position.distanceTo(playerMesh.position);
-        let distP2 = bot.mesh.position.distanceTo(otherPlayerMesh.position);
+        let distP2 = (gameMode === 'coop') ? bot.mesh.position.distanceTo(otherPlayerMesh.position) : 999;
         let target = distP1 < distP2 ? playerMesh.position : otherPlayerMesh.position;
 
         let dx = target.x - bot.mesh.position.x;
@@ -733,7 +856,7 @@
         bot.mesh.position.z += Math.cos(angle) * bot.speed;
         bot.mesh.rotation.y = angle;
 
-        // Deteksi tabrakan bot ke player (Darah Berkurang + Kebal 800ms)
+        // Deteksi tabrakan bot ke player (Darah Berkurang)
         if (distP1 < 0.8 && now - lastHitTime > 800) {
           lastHitTime = now;
           playerHP -= 20;
@@ -741,7 +864,11 @@
           hpEl.innerText = playerHP;
 
           if (playerHP <= 0 && isPlaying) {
-            triggerGlobalGameOver();
+            if (gameMode === 'solo') {
+              triggerLocalGameOver();
+            } else {
+              triggerGlobalGameOver();
+            }
           }
         }
       });
@@ -757,10 +884,16 @@
       isPlaying = false;
       clearInterval(botSpawner);
 
-      const teamName = `${p1Name} & ${p2Name}`;
-      if (playerRole === 'p1') saveCoopScore(teamName, kills);
+      const playerName = document.getElementById('player-name').value.trim() || 'Player';
+      if (gameMode === 'solo') {
+        saveSoloScore(playerName, kills);
+        msgTitle.innerText = "KAMU GUGUR!";
+      } else {
+        const teamName = `${p1Name} & ${p2Name}`;
+        if (playerRole === 'p1') saveCoopScore(teamName, kills);
+        msgTitle.innerText = "TIM KAMU GUGUR!";
+      }
 
-      msgTitle.innerText = "TIM KAMU GUGUR!";
       startBtn.innerText = "MAIN LAGI 🔄";
       overlay.style.display = "flex";
     }
