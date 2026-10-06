@@ -183,6 +183,23 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
+    /* TOMBOL SKILL KHUSUS DI LAYAR */
+    #skill-action-btn {
+      display: none;
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+      color: #fff;
+      border: 2px solid #a78bfa;
+      padding: 8px 14px;
+      font-size: 10px;
+      border-radius: 20px;
+      font-weight: bold;
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.6);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #skill-action-btn:active { transform: scale(0.95); }
+
     #admin-toggle-btn {
       display: none;
       position: absolute;
@@ -264,6 +281,8 @@
 
     <div id="right-joy-wrap" class="joy-container">
       <button class="btn-weapon" id="weapon-btn" onclick="toggleWeapon()">PISTOL 🔫</button>
+      <!-- TOMBOL SKILL KHUSUS (MUNCUL JIKA FITUR ADMIN DIAKTIFKAN) -->
+      <button id="skill-action-btn" onclick="triggerAdminSkill()">SKILL: SUMMON 💀</button>
       <div id="attack-joy" class="joystick-base">
         <div id="attack-stick" class="joystick-stick"></div>
       </div>
@@ -352,7 +371,7 @@
     let currentWave = 1;
     let botBaseDamage = 10;
     let healItems = [];
-    let activeUndeads = []; // Array untuk menyimpan summon Undead Besar
+    let activeUndeads = [];
 
     function showMainMenu() {
       document.getElementById('main-menu-view').style.display = 'flex';
@@ -425,15 +444,19 @@
     function unlockAdminSword() {
       isAdminSwordUnlocked = !isAdminSwordUnlocked;
       const btn = document.getElementById("sword-btn-owner");
+      const skillBtn = document.getElementById("skill-action-btn");
+      
       if (isAdminSwordUnlocked) {
         btn.innerText = "PEDANG OP: UNLOCKED ⚔️";
         btn.style.background = "#d97706";
+        skillBtn.style.display = "block"; // Tampilkan tombol skill khusus di layar
         currentWeapon = "ADMIN_SWORD";
-        weaponBtn.innerText = "SUMMON UNDEAD 💀";
+        weaponBtn.innerText = "SKILL MODE 💀";
         weaponBtn.style.background = "#b45309";
       } else {
         btn.innerText = "PEDANG OP: OFF ⚔️";
         btn.style.background = "#4338ca";
+        skillBtn.style.display = "none"; // Sembunyikan tombol skill khusus
         currentWeapon = "PISTOL";
         weaponBtn.innerText = "PISTOL 🔫";
         weaponBtn.style.background = "#0284c7";
@@ -824,16 +847,6 @@
         currentWeapon = "BAZOKA";
         weaponBtn.innerText = "BAZOKA 🚀";
         weaponBtn.style.background = "#d97706";
-      } else if (currentWeapon === "BAZOKA") {
-        if (isAdminSwordUnlocked) {
-          currentWeapon = "ADMIN_SWORD";
-          weaponBtn.innerText = "SUMMON UNDEAD 💀";
-          weaponBtn.style.background = "#b45309";
-        } else {
-          currentWeapon = "PISTOL";
-          weaponBtn.innerText = "PISTOL 🔫";
-          weaponBtn.style.background = "#0284c7";
-        }
       } else {
         currentWeapon = "PISTOL";
         weaponBtn.innerText = "PISTOL 🔫";
@@ -843,9 +856,15 @@
       const sMesh = playerMesh.getObjectByName("admin_sword_mesh");
       const gMesh = playerMesh.getObjectByName("default_gun");
       if (sMesh && gMesh) {
-        sMesh.visible = (currentWeapon === "ADMIN_SWORD");
-        gMesh.visible = (currentWeapon !== "ADMIN_SWORD");
+        sMesh.visible = false;
+        gMesh.visible = true;
       }
+    }
+
+    // Fungsi khusus yang dipanggil saat tombol skill diklik langsung
+    function triggerAdminSkill() {
+      if (!isPlaying || !isAdminSwordUnlocked) return;
+      spawnGiantUndead();
     }
 
     function checkPlayerLevel() {
@@ -942,17 +961,10 @@
       if (!isPlaying) return;
 
       const now = Date.now();
-      let cooldown = 250;
-      if (currentWeapon === "BAZOKA") cooldown = 800; // Bazoka bisa ditembakkan lebih cepat & kuat
-      if (currentWeapon === "ADMIN_SWORD") cooldown = 1500;
+      let cooldown = currentWeapon === "BAZOKA" ? 800 : 250;
 
       if (now - lastShootTime < cooldown) return;
       lastShootTime = now;
-
-      if (currentWeapon === "ADMIN_SWORD") {
-        spawnGiantUndead();
-        return;
-      }
 
       let speedScale = 0.5 + (playerLevel * 0.02);
       let dx = aimDirX * (currentWeapon === "BAZOKA" ? 0.35 : speedScale);
@@ -979,12 +991,10 @@
     }
 
     function spawnGiantUndead() {
-      // Membuat Undead Besar (Raksasa Bayangan Pelindung)
       const uGeo = new THREE.BoxGeometry(2.5, 4.0, 2.5);
       const uMat = new THREE.MeshPhongMaterial({ color: 0x4c1d95, emissive: 0x2e1065 });
       const uMesh = new THREE.Mesh(uGeo, uMat);
       
-      // Spawn di depan player
       uMesh.position.set(
         playerMesh.position.x + (Math.sin(playerMesh.rotation.y) * 2),
         1.5,
@@ -994,7 +1004,7 @@
 
       activeUndeads.push({
         mesh: uMesh,
-        lifeTimer: 300 // Bertahan selama 300 frame (sekitar 5-6 detik)
+        lifeTimer: 300
       });
     }
 
@@ -1008,7 +1018,7 @@
       bullets.push({ mesh: mesh, dx: b.dx, dz: b.dz, type: b.type });
     }
 
-    function triggerExplosionAOE(epicenter, radius = 6.5) {
+    function triggerExplosionAOE(epicenter, radius = 7.0) {
       const AOE_RADIUS = radius;
 
       const expGeo = new THREE.SphereGeometry(AOE_RADIUS, 16, 16);
@@ -1092,12 +1102,10 @@
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
-      // Update Undead Besar (Menghancurkan musuh terdekat secara otomatis)
       for (let uIdx = activeUndeads.length - 1; uIdx >= 0; uIdx--) {
         let undead = activeUndeads[uIdx];
         undead.lifeTimer--;
 
-        // Undead menyerang musuh terdekat di sekitarnya
         for (let bIdx = bots.length - 1; bIdx >= 0; bIdx--) {
           let bot = bots[bIdx];
           if (undead.mesh.position.distanceTo(bot.mesh.position) < 3.5) {
@@ -1151,7 +1159,7 @@
           if (dist < (b.type === "BAZOKA" ? 1.5 : 0.9)) {
             hitHappened = true;
             if (b.type === "BAZOKA") {
-              triggerExplosionAOE(b.mesh.position.clone(), 7.0); // Area ledakan bazoka diperbesar & diperkuat
+              triggerExplosionAOE(b.mesh.position.clone(), 7.0);
             } else {
               spawnHealOrb(bot.mesh.position.x, bot.mesh.position.z);
               if (gameMode === 'solo') {
