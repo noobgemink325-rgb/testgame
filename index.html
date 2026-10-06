@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Twin Joystick Fix</title>
+  <title>Bot War Arena 3D - Twin Joystick & Leaderboard Fix</title>
   <style>
     * {
       box-sizing: border-box;
@@ -470,17 +470,21 @@
       });
     }
 
+    // FIX VALIDASI NAMA KOSONG DI LEADERBOARD
     function syncRealtimeScore() {
       if (kills <= 0) return;
-      const nameInput = document.getElementById('player-name').value.trim() || 'Player';
+      let rawName = document.getElementById('player-name').value.trim();
 
       if (gameMode === 'solo') {
+        let validName = rawName !== "" ? rawName : "Player";
         if (!currentScoreRef) {
           currentScoreRef = db.ref('leaderboard_solo').push();
         }
-        currentScoreRef.set({ name: nameInput, kills: kills, timestamp: Date.now() });
+        currentScoreRef.set({ name: validName, kills: kills, timestamp: Date.now() });
       } else if (gameMode === 'coop' && playerRole === 'p1') {
-        const teamName = `${p1Name} & ${p2Name}`;
+        let validP1 = (p1Name && p1Name !== "") ? p1Name : "P1";
+        let validP2 = (p2Name && p2Name !== "" && p2Name !== "Menunggu...") ? p2Name : "P2";
+        let teamName = `${validP1} & ${validP2}`;
         if (!currentScoreRef) {
           currentScoreRef = db.ref('leaderboard_coop').push();
         }
@@ -491,7 +495,10 @@
     function createRoom() {
       roomId = Math.floor(1000 + Math.random() * 9000).toString();
       playerRole = 'p1';
-      p1Name = document.getElementById('player-name').value.trim() || 'P1';
+      
+      let rawName = document.getElementById('player-name').value.trim();
+      p1Name = rawName !== "" ? rawName : 'P1';
+      
       roomRef = db.ref(`rooms/${roomId}`);
 
       roomRef.set({
@@ -518,12 +525,14 @@
       if (!roomId) return alert("Masukkan kode room!");
 
       playerRole = 'p2';
-      p2Name = document.getElementById('player-name').value.trim() || 'P2';
+      let rawName = document.getElementById('player-name').value.trim();
+      p2Name = rawName !== "" ? rawName : 'P2';
+      
       roomRef = db.ref(`rooms/${roomId}`);
 
       roomRef.get().then((snapshot) => {
         if (snapshot.exists()) {
-          p1Name = snapshot.val().p1.name;
+          p1Name = snapshot.val().p1.name || 'P1';
           roomRef.child('p2').set({ name: p2Name, x: 2, z: 0, hp: 100 });
           listenToRoom();
         } else {
@@ -598,7 +607,6 @@
     let playerMesh, otherPlayerMesh, playerHP = 100, kills = 0, isPlaying = false;
     let bullets = [], botBullets = [], bots = [];
     let keys = {}, moveJoyDir = { x: 0, y: 0 }, attackJoyDir = { x: 0, y: 0 };
-    let lastAimDir = { x: 0, z: -1 };
     let botSpawner;
     let currentWeapon = "PISTOL";
     let lastShootTime = 0;
@@ -665,7 +673,7 @@
       return pGroup;
     }
 
-    // SYSTEM MULTI-TOUCH DUAL JOYSTICK
+    // MULTI-TOUCH DUAL JOYSTICK LOGIC
     const moveJoyContainer = document.getElementById("move-joy");
     const moveStick = document.getElementById("move-stick");
     const attackJoyContainer = document.getElementById("attack-joy");
@@ -743,9 +751,7 @@
       }
     });
 
-    window.addEventListener("keydown", (e) => {
-      keys[e.key] = true;
-    });
+    window.addEventListener("keydown", (e) => keys[e.key] = true);
     window.addEventListener("keyup", (e) => keys[e.key] = false);
 
     function toggleWeapon() {
@@ -1002,7 +1008,6 @@
     function updateGameLogic() {
       if (!isPlaying) return;
 
-      // PERGERAKAN DARI JOYSTICK KIRI / KEYBOARD
       let moveX = moveJoyDir.x;
       let moveZ = moveJoyDir.y;
 
@@ -1028,7 +1033,6 @@
         }
       }
 
-      // AKSI SERANGAN DARI JOYSTICK KANAN
       let attackMagnitude = Math.hypot(attackJoyDir.x, attackJoyDir.y);
       if (attackMagnitude > 0.3) {
         let normX = attackJoyDir.x / attackMagnitude;
@@ -1044,7 +1048,6 @@
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
-      // HEAL ORB CHECK
       for (let hIdx = healItems.length - 1; hIdx >= 0; hIdx--) {
         let item = healItems[hIdx];
         let dist = playerMesh.position.distanceTo(item.position);
@@ -1059,7 +1062,6 @@
         }
       }
 
-      // PELURU CHECK
       for (let index = bullets.length - 1; index >= 0; index--) {
         let b = bullets[index];
         b.mesh.position.x += b.dx;
@@ -1103,7 +1105,6 @@
         }
       }
 
-      // BOT MOVEMENT & DAMAGE
       const now = Date.now();
       bots.forEach((bot) => {
         let distP1 = bot.mesh.position.distanceTo(playerMesh.position);
