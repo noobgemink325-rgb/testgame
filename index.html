@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Fixed Co-Op HP & Solo Mode</title>
+  <title>Bot War Arena 3D - Full Integrated</title>
   <style>
     * {
       box-sizing: border-box;
@@ -68,7 +68,7 @@
     .mode-tabs {
       display: flex;
       gap: 6px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       width: 85%;
     }
     .btn-tab {
@@ -95,14 +95,14 @@
       color: #fff;
       font-size: 14px;
       text-align: center;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       width: 85%;
       outline: none;
     }
     .room-group {
       display: flex;
       gap: 6px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       width: 85%;
     }
     .btn-room {
@@ -122,8 +122,8 @@
       color: #cbd5e1;
     }
     #start-btn {
-      padding: 10px 24px;
-      font-size: 15px;
+      padding: 8px 20px;
+      font-size: 14px;
       font-weight: bold;
       color: #fff;
       background: #ef4444;
@@ -133,6 +133,39 @@
       box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
     }
     #start-btn:active { transform: scale(0.95); }
+
+    /* OWNER MENU PANEL */
+    #owner-panel {
+      display: none;
+      width: 85%;
+      background: #1e1b4b;
+      border: 1px solid #6366f1;
+      border-radius: 8px;
+      padding: 6px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    #owner-panel h4 {
+      font-size: 10px;
+      color: #a5b4fc;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+    .owner-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+    .btn-owner {
+      padding: 4px;
+      font-size: 9px;
+      font-weight: bold;
+      background: #4338ca;
+      color: #fff;
+      border: 1px solid #818cf8;
+      border-radius: 4px;
+      cursor: pointer;
+    }
 
     .controls-wrapper {
       width: 340px;
@@ -220,7 +253,6 @@
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
@@ -235,16 +267,25 @@
 
   <div id="game-container">
     <div id="overlay">
-      <!-- TAB MODE SELECTOR -->
       <div class="mode-tabs">
         <button id="tab-solo-btn" class="btn-tab" onclick="switchGameMode('solo')">SOLO PLAYER</button>
         <button id="tab-coop-btn" class="btn-tab active" onclick="switchGameMode('coop')">CO-OP MULTIPLAYER</button>
       </div>
 
-      <h2 id="msg-title" style="margin-bottom: 6px; color: #ef4444;">CO-OP MULTIPLAYER</h2>
-      <input type="text" id="player-name" placeholder="Masukkan Nickname..." maxlength="12">
+      <h2 id="msg-title" style="margin-bottom: 4px; color: #ef4444;">CO-OP MULTIPLAYER</h2>
+      <input type="text" id="player-name" placeholder="Masukkan Nickname..." maxlength="12" oninput="checkOwnerKey(this.value)">
       
-      <!-- CONTROLS CO-OP -->
+      <!-- OWNER PANEL -->
+      <div id="owner-panel">
+        <h4>⚡ OWNER MENU ACTIVATED ⚡</h4>
+        <div class="owner-btns">
+          <button class="btn-owner" onclick="toggleGodMode()">GOD MODE: OFF</button>
+          <button class="btn-owner" onclick="addInstantKills()">+10 KILLS</button>
+          <button class="btn-owner" onclick="clearAllBots()">CLEAR BOTS</button>
+          <button class="btn-owner" style="background:#b91c1c;" onclick="resetCurrentLeaderboard()">RESET LB</button>
+        </div>
+      </div>
+
       <div id="coop-controls" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
         <div class="room-group">
           <button class="btn-room" onclick="createRoom()">BUAT ROOM ➕</button>
@@ -254,7 +295,7 @@
       </div>
 
       <button id="start-btn" onclick="startGame()" style="display:none;">MULAI CO-OP 🚀</button>
-      <p id="room-info" style="font-size:11px; color:#94a3b8; margin-top:4px;"></p>
+      <p id="room-info" style="font-size:10px; color:#94a3b8; margin-top:2px;"></p>
     </div>
   </div>
 
@@ -270,7 +311,7 @@
     </div>
   </div>
 
-  <!-- FIX BUG TAG HTML LEADERBOARD -->
+  <!-- FIX BUG TAG LEADERBOARD -->
   <div class="leaderboard-box">
     <div id="lb-title-text" class="leaderboard-title">🏆 TOP TIM CO-OP GLOBAL</div>
     <ol id="leaderboard-list">
@@ -279,7 +320,7 @@
   </div>
 
   <script>
-    // --- INTEGRASI FIREBASE MULTIPLAYER ---
+    // --- FIREBASE CONFIG & INTEGRASI ---
     const firebaseConfig = {
       apiKey: "AIzaSyBOo74lEYtQGFC5_1NeDLPi0DuG2QhAK3g",
       authDomain: "bot-war-arena.firebaseapp.com",
@@ -294,12 +335,65 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let gameMode = 'coop'; // 'solo' atau 'coop'
+    const OWNER_PASSCODE = "DIKABAIK123";
+    let isGodMode = false;
+
+    let gameMode = 'coop';
     let roomId = null;
     let playerRole = null;
     let roomRef = null;
     let p1Name = "P1", p2Name = "P2";
     let lastHitTime = 0;
+
+    // --- LOGIKA DETEKSI OWNER ---
+    function checkOwnerKey(val) {
+      const ownerPanel = document.getElementById("owner-panel");
+      if (val.trim().toUpperCase() === OWNER_PASSCODE) {
+        ownerPanel.style.display = "block";
+      } else {
+        ownerPanel.style.display = "none";
+      }
+    }
+
+    function toggleGodMode() {
+      isGodMode = !isGodMode;
+      const btn = event.target;
+      if (isGodMode) {
+        playerHP = 9999;
+        hpEl.innerText = "9999 (GOD)";
+        btn.innerText = "GOD MODE: ON 🛡️";
+        btn.style.background = "#16a34a";
+      } else {
+        playerHP = 100;
+        hpEl.innerText = playerHP;
+        btn.innerText = "GOD MODE: OFF";
+        btn.style.background = "#4338ca";
+      }
+    }
+
+    function addInstantKills() {
+      kills += 10;
+      killsEl.innerText = kills;
+      if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+    }
+
+    function clearAllBots() {
+      bots.forEach(bot => scene.remove(bot.mesh));
+      bots = [];
+      if (gameMode === 'coop' && roomRef) {
+        roomRef.child('bots').remove();
+      }
+    }
+
+    function resetCurrentLeaderboard() {
+      if (!confirm("Yakin ingin menghapus seluruh leaderboard ini?")) return;
+      if (gameMode === 'solo') {
+        db.ref('leaderboard_solo').remove();
+      } else {
+        db.ref('leaderboard_coop').remove();
+      }
+      alert("Leaderboard berhasil di-reset!");
+    }
 
     // --- SWITCH MODE SOLO / CO-OP ---
     function switchGameMode(mode) {
@@ -688,7 +782,7 @@
     }
 
     function startGameLocal() {
-      playerHP = 100;
+      playerHP = isGodMode ? 9999 : 100;
       kills = 0;
       isPlaying = true;
 
@@ -706,7 +800,7 @@
       }
 
       killsEl.innerText = kills;
-      hpEl.innerText = playerHP;
+      hpEl.innerText = isGodMode ? "9999 (GOD)" : playerHP;
       overlay.style.display = "none";
 
       if (botSpawner) clearInterval(botSpawner);
@@ -782,6 +876,50 @@
       bullets.push({ mesh: mesh, dx: b.dx, dz: b.dz, type: b.type });
     }
 
+    // --- LOGIKA LEDAKAN AOE BAZOOKA ---
+    function triggerExplosionAOE(epicenter) {
+      const AOE_RADIUS = 4.5;
+
+      const expGeo = new THREE.SphereGeometry(AOE_RADIUS, 16, 16);
+      const expMat = new THREE.MeshBasicMaterial({ 
+        color: 0xff4500, 
+        transparent: true, 
+        opacity: 0.6 
+      });
+      const expMesh = new THREE.Mesh(expGeo, expMat);
+      expMesh.position.copy(epicenter);
+      scene.add(expMesh);
+
+      let scale = 0.2;
+      const expInterval = setInterval(() => {
+        scale += 0.2;
+        expMesh.scale.set(scale, scale, scale);
+        expMat.opacity -= 0.1;
+        if (expMat.opacity <= 0) {
+          clearInterval(expInterval);
+          scene.remove(expMesh);
+        }
+      }, 30);
+
+      for (let i = bots.length - 1; i >= 0; i--) {
+        let bot = bots[i];
+        let distance = epicenter.distanceTo(bot.mesh.position);
+
+        if (distance <= AOE_RADIUS) {
+          if (gameMode === 'solo') {
+            scene.remove(bot.mesh);
+            bots.splice(i, 1);
+          } else if (playerRole === 'p1' && roomRef) {
+            roomRef.child(`bots/${bot.key}`).remove();
+          }
+          kills++;
+          killsEl.innerText = kills;
+          if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+        }
+      }
+    }
+
+    // --- UPDATE GAME LOGIC ---
     function updateGameLogic() {
       if (!isPlaying) return;
 
@@ -814,32 +952,44 @@
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
       // Peluru & Deteksi Hit Musuh
-      bullets.forEach((b, index) => {
+      for (let index = bullets.length - 1; index >= 0; index--) {
+        let b = bullets[index];
         b.mesh.position.x += b.dx;
         b.mesh.position.z += b.dz;
 
-        bots.forEach((bot, bIdx) => {
-          let dist = b.mesh.position.distanceTo(bot.mesh.position);
-          if (dist < 0.9) {
-            if (gameMode === 'solo') {
-              scene.remove(bot.mesh);
-              bots.splice(bIdx, 1);
-            } else if (playerRole === 'p1' && roomRef) {
-              roomRef.child(`bots/${bot.key}`).remove();
-            }
-            scene.remove(b.mesh);
-            bullets.splice(index, 1);
-            kills++;
-            killsEl.innerText = kills;
-            if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
-          }
-        });
+        let hitHappened = false;
 
-        if (Math.abs(b.mesh.position.x) > limit || Math.abs(b.mesh.position.z) > limit) {
+        for (let bIdx = bots.length - 1; bIdx >= 0; bIdx--) {
+          let bot = bots[bIdx];
+          let dist = b.mesh.position.distanceTo(bot.mesh.position);
+
+          if (dist < 0.9) {
+            hitHappened = true;
+            if (b.type === "BAZOKA") {
+              triggerExplosionAOE(b.mesh.position.clone());
+            } else {
+              if (gameMode === 'solo') {
+                scene.remove(bot.mesh);
+                bots.splice(bIdx, 1);
+              } else if (playerRole === 'p1' && roomRef) {
+                roomRef.child(`bots/${bot.key}`).remove();
+              }
+              kills++;
+              killsEl.innerText = kills;
+              if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+            }
+            break;
+          }
+        }
+
+        if (hitHappened || Math.abs(b.mesh.position.x) > limit || Math.abs(b.mesh.position.z) > limit) {
+          if (!hitHappened && b.type === "BAZOKA") {
+            triggerExplosionAOE(b.mesh.position.clone());
+          }
           scene.remove(b.mesh);
           bullets.splice(index, 1);
         }
-      });
+      }
 
       // Pergerakan Musuh & Sistem Kena Hit
       const now = Date.now();
@@ -856,12 +1006,13 @@
         bot.mesh.position.z += Math.cos(angle) * bot.speed;
         bot.mesh.rotation.y = angle;
 
-        // Deteksi tabrakan bot ke player (Darah Berkurang)
         if (distP1 < 0.8 && now - lastHitTime > 800) {
           lastHitTime = now;
-          playerHP -= 20;
-          if (playerHP < 0) playerHP = 0;
-          hpEl.innerText = playerHP;
+          if (!isGodMode) {
+            playerHP -= 20;
+            if (playerHP < 0) playerHP = 0;
+            hpEl.innerText = playerHP;
+          }
 
           if (playerHP <= 0 && isPlaying) {
             if (gameMode === 'solo') {
