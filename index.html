@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Full Integrated</title>
+  <title>Bot War Arena 3D - Monolithic Integrated</title>
   <style>
     * {
       box-sizing: border-box;
@@ -134,7 +134,7 @@
     }
     #start-btn:active { transform: scale(0.95); }
 
-    /* OWNER MENU PANEL */
+    /* OWNER PANEL */
     #owner-panel {
       display: none;
       width: 85%;
@@ -280,9 +280,9 @@
         <h4>⚡ OWNER MENU ACTIVATED ⚡</h4>
         <div class="owner-btns">
           <button class="btn-owner" onclick="toggleGodMode()">GOD MODE: OFF</button>
+          <button class="btn-owner" id="sword-btn-owner" onclick="unlockAdminSword()">PEDANG OP: OFF ⚔️</button>
           <button class="btn-owner" onclick="addInstantKills()">+10 KILLS</button>
           <button class="btn-owner" onclick="clearAllBots()">CLEAR BOTS</button>
-          <button class="btn-owner" style="background:#b91c1c;" onclick="resetCurrentLeaderboard()">RESET LB</button>
         </div>
       </div>
 
@@ -311,7 +311,6 @@
     </div>
   </div>
 
-  <!-- FIX BUG TAG LEADERBOARD -->
   <div class="leaderboard-box">
     <div id="lb-title-text" class="leaderboard-title">🏆 TOP TIM CO-OP GLOBAL</div>
     <ol id="leaderboard-list">
@@ -335,8 +334,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const OWNER_PASSCODE = "DIKABAIK123";
+    const OWNER_PASSCODE = "OWNER123";
     let isGodMode = false;
+    let isAdminSwordUnlocked = false;
 
     let gameMode = 'coop';
     let roomId = null;
@@ -345,7 +345,6 @@
     let p1Name = "P1", p2Name = "P2";
     let lastHitTime = 0;
 
-    // --- LOGIKA DETEKSI OWNER ---
     function checkOwnerKey(val) {
       const ownerPanel = document.getElementById("owner-panel");
       if (val.trim().toUpperCase() === OWNER_PASSCODE) {
@@ -360,42 +359,54 @@
       const btn = event.target;
       if (isGodMode) {
         playerHP = 9999;
-        hpEl.innerText = "9999 (GOD)";
+        const hpEl = document.getElementById("hp");
+        if (hpEl) hpEl.innerText = "9999 (GOD)";
         btn.innerText = "GOD MODE: ON 🛡️";
         btn.style.background = "#16a34a";
       } else {
         playerHP = 100;
-        hpEl.innerText = playerHP;
+        const hpEl = document.getElementById("hp");
+        if (hpEl) hpEl.innerText = playerHP;
         btn.innerText = "GOD MODE: OFF";
         btn.style.background = "#4338ca";
       }
     }
 
+    function unlockAdminSword() {
+      isAdminSwordUnlocked = !isAdminSwordUnlocked;
+      const btn = document.getElementById("sword-btn-owner");
+      if (isAdminSwordUnlocked) {
+        btn.innerText = "PEDANG OP: UNLOCKED ⚔️";
+        btn.style.background = "#d97706";
+        currentWeapon = "ADMIN_SWORD";
+        weaponBtn.innerText = "Senjata: PEDANG OP ⚔️";
+        weaponBtn.style.background = "#b45309";
+        weaponBtn.style.borderColor = "#f59e0b";
+        shootBtn.innerText = "TEBAS ⚔️";
+      } else {
+        btn.innerText = "PEDANG OP: OFF ⚔️";
+        btn.style.background = "#4338ca";
+        currentWeapon = "PISTOL";
+        weaponBtn.innerText = "Senjata: PISTOL 🔫";
+        weaponBtn.style.background = "#0284c7";
+        weaponBtn.style.borderColor = "#38bdf8";
+        shootBtn.innerText = "TEMBAK 💥";
+      }
+    }
+
     function addInstantKills() {
       kills += 10;
-      killsEl.innerText = kills;
+      const killsEl = document.getElementById("kills");
+      if (killsEl) killsEl.innerText = kills;
       if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
     }
 
     function clearAllBots() {
       bots.forEach(bot => scene.remove(bot.mesh));
       bots = [];
-      if (gameMode === 'coop' && roomRef) {
-        roomRef.child('bots').remove();
-      }
+      if (gameMode === 'coop' && roomRef) roomRef.child('bots').remove();
     }
 
-    function resetCurrentLeaderboard() {
-      if (!confirm("Yakin ingin menghapus seluruh leaderboard ini?")) return;
-      if (gameMode === 'solo') {
-        db.ref('leaderboard_solo').remove();
-      } else {
-        db.ref('leaderboard_coop').remove();
-      }
-      alert("Leaderboard berhasil di-reset!");
-    }
-
-    // --- SWITCH MODE SOLO / CO-OP ---
     function switchGameMode(mode) {
       gameMode = mode;
       const tabSolo = document.getElementById("tab-solo-btn");
@@ -405,6 +416,10 @@
       const startBtn = document.getElementById("start-btn");
       const roomInfo = document.getElementById("room-info");
       const lbTitle = document.getElementById("lb-title-text");
+      const killTextEl = document.querySelector(".score-board");
+
+      db.ref('leaderboard_solo').off();
+      db.ref('leaderboard_coop').off();
 
       if (mode === 'solo') {
         tabSolo.classList.add("active");
@@ -416,6 +431,8 @@
         startBtn.style.display = "block";
         roomInfo.innerText = "Mode Solo: Bermain sendiri lawan Bot!";
         lbTitle.innerText = "🏆 TOP SOLO GLOBAL";
+
+        killTextEl.innerHTML = `Kill Kamu: <span id="kills" style="color:#22c55e; font-weight:bold;">${kills}</span> | HP Kamu: <span id="hp" style="color:#ef4444; font-weight:bold;">${playerHP}</span> | Mode: <span style="color:#22c55e; font-weight:bold;">SOLO</span>`;
         loadSoloLeaderboard();
       } else {
         tabCoop.classList.add("active");
@@ -427,70 +444,53 @@
         startBtn.style.display = roomId ? "block" : "none";
         roomInfo.innerText = "";
         lbTitle.innerText = "🏆 TOP TIM CO-OP GLOBAL";
+
+        killTextEl.innerHTML = `Kill Tim: <span id="kills" style="color:#22c55e; font-weight:bold;">${kills}</span> | HP Kamu: <span id="hp" style="color:#ef4444; font-weight:bold;">${playerHP}</span> | Room: <span id="room-display" style="color:#facc15; font-weight:bold;">${roomId || '-'}</span>`;
         loadCoopLeaderboard();
       }
     }
 
+    function renderLeaderboardData(snapshot, isCoop) {
+      const list = document.getElementById("leaderboard-list");
+      list.innerHTML = "";
+      let scores = [];
+
+      snapshot.forEach((child) => scores.push(child.val()));
+      scores.sort((a, b) => b.kills - a.kills);
+
+      if (scores.length === 0) {
+        list.innerHTML = `<p class="no-data">Belum ada rekor global. Jadi yang pertama!</p>`;
+        return;
+      }
+
+      scores.forEach((item) => {
+        const li = document.createElement("li");
+        const nameText = isCoop ? item.team : item.name;
+        li.innerHTML = `<b>${nameText}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
+        list.appendChild(li);
+      });
+    }
+
     function loadCoopLeaderboard() {
-      db.ref('leaderboard_coop').orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
-        if (gameMode !== 'coop') return;
-        const list = document.getElementById("leaderboard-list");
-        list.innerHTML = "";
-        let scores = [];
-        snapshot.forEach((child) => scores.push(child.val()));
-        scores.sort((a, b) => b.kills - a.kills);
-
-        if (scores.length === 0) {
-          list.innerHTML = `<p class="no-data">Belum ada rekor tim. Jadi yang pertama!</p>`;
-          return;
-        }
-
-        scores.forEach((item) => {
-          const li = document.createElement("li");
-          li.innerHTML = `<b>${item.team}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
-          list.appendChild(li);
-        });
+      db.ref('leaderboard_coop').orderByChild('kills').limitToLast(10).on('value', (snapshot) => {
+        if (gameMode === 'coop') renderLeaderboardData(snapshot, true);
       });
     }
 
     function loadSoloLeaderboard() {
-      db.ref('leaderboard_solo').orderByChild('kills').limitToLast(5).on('value', (snapshot) => {
-        if (gameMode !== 'solo') return;
-        const list = document.getElementById("leaderboard-list");
-        list.innerHTML = "";
-        let scores = [];
-        snapshot.forEach((child) => scores.push(child.val()));
-        scores.sort((a, b) => b.kills - a.kills);
-
-        if (scores.length === 0) {
-          list.innerHTML = `<p class="no-data">Belum ada rekor Solo. Raih Kill terbanyak!</p>`;
-          return;
-        }
-
-        scores.forEach((item) => {
-          const li = document.createElement("li");
-          li.innerHTML = `<b>${item.name}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
-          list.appendChild(li);
-        });
+      db.ref('leaderboard_solo').orderByChild('kills').limitToLast(10).on('value', (snapshot) => {
+        if (gameMode === 'solo') renderLeaderboardData(snapshot, false);
       });
     }
 
     function saveCoopScore(teamName, killCount) {
       if (killCount === 0) return;
-      db.ref('leaderboard_coop').push({
-        team: teamName,
-        kills: killCount,
-        timestamp: Date.now()
-      });
+      db.ref('leaderboard_coop').push({ team: teamName, kills: killCount, timestamp: Date.now() });
     }
 
     function saveSoloScore(playerName, killCount) {
       if (killCount === 0) return;
-      db.ref('leaderboard_solo').push({
-        name: playerName,
-        kills: killCount,
-        timestamp: Date.now()
-      });
+      db.ref('leaderboard_solo').push({ name: playerName, kills: killCount, timestamp: Date.now() });
     }
 
     function createRoom() {
@@ -506,8 +506,9 @@
         kills: 0
       });
 
-      document.getElementById('room-display').innerText = roomId;
-      document.getElementById('room-info').innerText = `Kode Room: ${roomId} (Bagikan ke teman!)`;
+      const rd = document.getElementById('room-display');
+      if (rd) rd.innerText = roomId;
+      document.getElementById('room-info').innerText = `Kode Room: ${roomId}`;
       document.getElementById('start-btn').style.display = 'block';
 
       listenToRoom();
@@ -530,13 +531,9 @@
       roomRef.get().then((snapshot) => {
         if (snapshot.exists()) {
           p1Name = snapshot.val().p1.name;
-          roomRef.child('p2').set({
-            name: p2Name,
-            x: 2,
-            z: 0,
-            hp: 100
-          });
-          document.getElementById('room-display').innerText = roomId;
+          roomRef.child('p2').set({ name: p2Name, x: 2, z: 0, hp: 100 });
+          const rd = document.getElementById('room-display');
+          if (rd) rd.innerText = roomId;
           listenToRoom();
         } else {
           alert("Room tidak ditemukan!");
@@ -567,7 +564,8 @@
 
         if (data.kills !== undefined) {
           kills = data.kills;
-          killsEl.innerText = kills;
+          const killsEl = document.getElementById("kills");
+          if (killsEl) killsEl.innerText = kills;
         }
       });
 
@@ -592,17 +590,13 @@
       roomRef.child('bullets').on('child_added', (snapshot) => {
         if (gameMode === 'coop') {
           const b = snapshot.val();
-          if (b.owner !== playerRole) {
-            spawnRemoteBullet(b);
-          }
+          if (b.owner !== playerRole) spawnRemoteBullet(b);
         }
       });
     }
 
     // --- GAME ENGINE 3D ---
     const container = document.getElementById("game-container");
-    const killsEl = document.getElementById("kills");
-    const hpEl = document.getElementById("hp");
     const overlay = document.getElementById("overlay");
     const startBtn = document.getElementById("start-btn");
     const msgTitle = document.getElementById("msg-title");
@@ -665,7 +659,17 @@
       const gunMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
       const gun = new THREE.Mesh(gunGeo, gunMat);
       gun.position.set(0, 0, -0.7);
+      gun.name = "default_gun";
       pGroup.add(gun);
+
+      const swordGeo = new THREE.BoxGeometry(0.15, 1.8, 0.3);
+      const swordMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+      const sword = new THREE.Mesh(swordGeo, swordMat);
+      sword.position.set(0.6, 0.4, -0.6);
+      sword.rotation.x = Math.PI / 3;
+      sword.name = "admin_sword_mesh";
+      sword.visible = false;
+      pGroup.add(sword);
 
       return pGroup;
     }
@@ -751,11 +755,34 @@
         weaponBtn.innerText = "Senjata: BAZOKA 🚀";
         weaponBtn.style.background = "#d97706";
         weaponBtn.style.borderColor = "#f59e0b";
+        shootBtn.innerText = "TEMBAK 💥";
+      } else if (currentWeapon === "BAZOKA") {
+        if (isAdminSwordUnlocked) {
+          currentWeapon = "ADMIN_SWORD";
+          weaponBtn.innerText = "Senjata: PEDANG OP ⚔️";
+          weaponBtn.style.background = "#b45309";
+          weaponBtn.style.borderColor = "#f59e0b";
+          shootBtn.innerText = "TEBAS ⚔️";
+        } else {
+          currentWeapon = "PISTOL";
+          weaponBtn.innerText = "Senjata: PISTOL 🔫";
+          weaponBtn.style.background = "#0284c7";
+          weaponBtn.style.borderColor = "#38bdf8";
+          shootBtn.innerText = "TEMBAK 💥";
+        }
       } else {
         currentWeapon = "PISTOL";
         weaponBtn.innerText = "Senjata: PISTOL 🔫";
         weaponBtn.style.background = "#0284c7";
         weaponBtn.style.borderColor = "#38bdf8";
+        shootBtn.innerText = "TEMBAK 💥";
+      }
+
+      const sMesh = playerMesh.getObjectByName("admin_sword_mesh");
+      const gMesh = playerMesh.getObjectByName("default_gun");
+      if (sMesh && gMesh) {
+        sMesh.visible = (currentWeapon === "ADMIN_SWORD");
+        gMesh.visible = (currentWeapon !== "ADMIN_SWORD");
       }
     }
 
@@ -765,7 +792,7 @@
       autoBtn.style.background = autoShoot ? "#16a34a" : "#334155";
 
       if (autoShoot) {
-        autoShootInterval = setInterval(() => { if (isPlaying) playerShoot(); }, 250);
+        autoShootInterval = setInterval(() => { if (isPlaying) playerShoot(); }, 200);
       } else {
         clearInterval(autoShootInterval);
       }
@@ -774,7 +801,8 @@
     function startGame() {
       if (gameMode === 'solo') {
         playerRole = 'p1';
-        document.getElementById('room-display').innerText = 'SOLO';
+        const rd = document.getElementById('room-display');
+        if (rd) rd.innerText = 'SOLO';
         startGameLocal();
       } else if (playerRole === 'p1' && roomRef) {
         roomRef.update({ status: 'playing', kills: 0, bots: null, bullets: null });
@@ -792,15 +820,12 @@
       bullets = []; botBullets = []; bots = [];
 
       playerMesh.position.set(playerRole === 'p1' ? -2 : 2, 0.6, 0);
-      
-      if (gameMode === 'solo') {
-        otherPlayerMesh.visible = false;
-      } else {
-        otherPlayerMesh.visible = true;
-      }
+      otherPlayerMesh.visible = (gameMode !== 'solo');
 
-      killsEl.innerText = kills;
-      hpEl.innerText = isGodMode ? "9999 (GOD)" : playerHP;
+      const killsEl = document.getElementById("kills");
+      const hpEl = document.getElementById("hp");
+      if (killsEl) killsEl.innerText = kills;
+      if (hpEl) hpEl.innerText = isGodMode ? "9999 (GOD)" : playerHP;
       overlay.style.display = "none";
 
       if (botSpawner) clearInterval(botSpawner);
@@ -838,9 +863,17 @@
       if (!isPlaying) return;
 
       const now = Date.now();
-      const cooldown = (currentWeapon === "BAZOKA") ? 1000 : 250;
+      let cooldown = 250;
+      if (currentWeapon === "BAZOKA") cooldown = 1000;
+      if (currentWeapon === "ADMIN_SWORD") cooldown = 150;
+
       if (now - lastShootTime < cooldown) return;
       lastShootTime = now;
+
+      if (currentWeapon === "ADMIN_SWORD") {
+        triggerAdminSwordSlash();
+        return;
+      }
 
       let mag = Math.hypot(lastMoveDir.x, lastMoveDir.z) || 1;
       let dx = (lastMoveDir.x / mag) * (currentWeapon === "BAZOKA" ? 0.22 : 0.45);
@@ -866,6 +899,46 @@
       }
     }
 
+    function triggerAdminSwordSlash() {
+      const SWORD_SLASH_RADIUS = 6.0;
+
+      const ringGeo = new THREE.RingGeometry(0.2, 0.8, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xfbcfe8, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.rotation.x = Math.PI / 2;
+      ringMesh.position.set(playerMesh.position.x, 0.4, playerMesh.position.z);
+      scene.add(ringMesh);
+
+      let scale = 1;
+      const ringInterval = setInterval(() => {
+        scale += 1.2;
+        ringMesh.scale.set(scale, scale, scale);
+        ringMat.opacity -= 0.15;
+        if (ringMat.opacity <= 0) {
+          clearInterval(ringInterval);
+          scene.remove(ringMesh);
+        }
+      }, 20);
+
+      for (let i = bots.length - 1; i >= 0; i--) {
+        let bot = bots[i];
+        let distance = playerMesh.position.distanceTo(bot.mesh.position);
+
+        if (distance <= SWORD_SLASH_RADIUS) {
+          if (gameMode === 'solo') {
+            scene.remove(bot.mesh);
+            bots.splice(i, 1);
+          } else if (playerRole === 'p1' && roomRef) {
+            roomRef.child(`bots/${bot.key}`).remove();
+          }
+          kills++;
+          const killsEl = document.getElementById("kills");
+          if (killsEl) killsEl.innerText = kills;
+          if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+        }
+      }
+    }
+
     function spawnRemoteBullet(b) {
       const bGeo = new THREE.SphereGeometry(b.type === "BAZOKA" ? 0.5 : 0.25, 8, 8);
       const bMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
@@ -876,16 +949,11 @@
       bullets.push({ mesh: mesh, dx: b.dx, dz: b.dz, type: b.type });
     }
 
-    // --- LOGIKA LEDAKAN AOE BAZOOKA ---
     function triggerExplosionAOE(epicenter) {
       const AOE_RADIUS = 4.5;
 
       const expGeo = new THREE.SphereGeometry(AOE_RADIUS, 16, 16);
-      const expMat = new THREE.MeshBasicMaterial({ 
-        color: 0xff4500, 
-        transparent: true, 
-        opacity: 0.6 
-      });
+      const expMat = new THREE.MeshBasicMaterial({ color: 0xff4500, transparent: true, opacity: 0.6 });
       const expMesh = new THREE.Mesh(expGeo, expMat);
       expMesh.position.copy(epicenter);
       scene.add(expMesh);
@@ -913,13 +981,13 @@
             roomRef.child(`bots/${bot.key}`).remove();
           }
           kills++;
-          killsEl.innerText = kills;
+          const killsEl = document.getElementById("kills");
+          if (killsEl) killsEl.innerText = kills;
           if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
         }
       }
     }
 
-    // --- UPDATE GAME LOGIC ---
     function updateGameLogic() {
       if (!isPlaying) return;
 
@@ -951,7 +1019,6 @@
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
-      // Peluru & Deteksi Hit Musuh
       for (let index = bullets.length - 1; index >= 0; index--) {
         let b = bullets[index];
         b.mesh.position.x += b.dx;
@@ -975,7 +1042,8 @@
                 roomRef.child(`bots/${bot.key}`).remove();
               }
               kills++;
-              killsEl.innerText = kills;
+              const killsEl = document.getElementById("kills");
+              if (killsEl) killsEl.innerText = kills;
               if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
             }
             break;
@@ -991,7 +1059,6 @@
         }
       }
 
-      // Pergerakan Musuh & Sistem Kena Hit
       const now = Date.now();
       bots.forEach((bot) => {
         let distP1 = bot.mesh.position.distanceTo(playerMesh.position);
@@ -1011,7 +1078,8 @@
           if (!isGodMode) {
             playerHP -= 20;
             if (playerHP < 0) playerHP = 0;
-            hpEl.innerText = playerHP;
+            const hpEl = document.getElementById("hp");
+            if (hpEl) hpEl.innerText = playerHP;
           }
 
           if (playerHP <= 0 && isPlaying) {
@@ -1026,9 +1094,7 @@
     }
 
     function triggerGlobalGameOver() {
-      if (roomRef) {
-        roomRef.update({ status: 'gameover' });
-      }
+      if (roomRef) roomRef.update({ status: 'gameover' });
     }
 
     function triggerLocalGameOver() {
