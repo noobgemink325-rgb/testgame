@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Monolithic Integrated</title>
+  <title>Bot War Arena 3D - Fixed Enter Key</title>
   <style>
     * {
       box-sizing: border-box;
@@ -759,10 +759,10 @@
       } else if (currentWeapon === "BAZOKA") {
         if (isAdminSwordUnlocked) {
           currentWeapon = "ADMIN_SWORD";
-          weaponBtn.innerText = "Senjata: PEDANG OP ⚔️";
+          weaponBtn.innerText = "Senjata: PEDANG OP ⚔️️";
           weaponBtn.style.background = "#b45309";
           weaponBtn.style.borderColor = "#f59e0b";
-          shootBtn.innerText = "TEBAS ⚔️";
+          shootBtn.innerText = "TEBAS ⚔️️";
         } else {
           currentWeapon = "PISTOL";
           weaponBtn.innerText = "Senjata: PISTOL 🔫";
@@ -1120,6 +1120,22 @@
       updateGameLogic();
       renderer.render(scene, camera);
     }
+
+    // LISTENER ENTER KEYBOARD
+    document.getElementById('player-name').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (gameMode === 'solo') {
+          startGame();
+        } else {
+          if (!roomId) {
+            createRoom();
+          } else {
+            startGame();
+          }
+        }
+      }
+    });
 
     init3D();
     loadCoopLeaderboard();
