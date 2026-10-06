@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>War Thunder 3D - Clean UI Style</title>
+  <title>War Thunder 3D - Fixed Multiplayer Sync</title>
   <style>
     * {
       box-sizing: border-box;
@@ -26,7 +26,6 @@
       overflow: hidden;
     }
 
-    /* BANNER JUDUL MERAH DARI DESAIN */
     .title-banner {
       background: #ef4444;
       color: #fff;
@@ -63,7 +62,6 @@
       height: 100%;
     }
 
-    /* CONTAINER OVERLAY UTAMA (KAPSUL ABU-ABU) */
     #overlay {
       position: absolute;
       top: 0;
@@ -91,7 +89,6 @@
       box-shadow: 0 8px 25px rgba(0,0,0,0.6);
     }
 
-    /* TOMBOL PUTIH BERSIH TUMPUL */
     .btn-ui {
       width: 100%;
       padding: 8px 0;
@@ -111,7 +108,6 @@
       transform: scale(0.95);
     }
 
-    /* SUBMENU MODAL UI */
     .sub-panel {
       display: none;
       width: 100%;
@@ -154,7 +150,6 @@
       color: #fff;
     }
 
-    /* IN-GAME FLOATING ADMIN BUTTON & MODAL */
     #admin-toggle-btn {
       display: none;
       position: absolute;
@@ -205,7 +200,6 @@
       cursor: pointer;
     }
 
-    /* JOYSTICK CONTROLS */
     .controls-wrapper {
       width: 340px;
       display: flex;
@@ -253,7 +247,6 @@
       font-weight: bold;
     }
 
-    /* LEADERBOARD IN-GAME POPUP */
     .leaderboard-box {
       display: none;
       width: 100%;
@@ -263,13 +256,6 @@
       border-radius: 8px;
       padding: 4px 8px;
       text-align: left;
-    }
-    .leaderboard-title {
-      font-size: 10px;
-      color: #facc15;
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 2px;
     }
     ol { padding-left: 18px; font-size: 10px; color: #cbd5e1; }
     .no-data { color: #64748b; font-size: 9px; text-align: center; }
@@ -281,7 +267,6 @@
 </head>
 <body>
 
-  <!-- HEADER BENNER MERAH -->
   <div class="title-banner">WAR THUNDER 3D</div>
 
   <div class="score-board">
@@ -309,11 +294,9 @@
       </div>
     </div>
 
-    <!-- OVERLAY MENU KAPSUL ABU-ABU -->
     <div id="overlay">
       <div class="menu-capsule">
         
-        <!-- MENU UTAMA KAPSUL -->
         <div id="main-menu-view" style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
           <button class="btn-ui" onclick="showSubPanel('play')">PLAY</button>
           <button class="btn-ui" onclick="showSubPanel('setting')">SETTING</button>
@@ -321,7 +304,6 @@
           <button class="btn-ui" onclick="leaveGame()">LEAVE</button>
         </div>
 
-        <!-- PANEL SUB-MENU PLAY -->
         <div id="panel-play" class="sub-panel">
           <div class="mode-tabs">
             <button id="tab-solo-btn" class="btn-tab active" onclick="switchGameMode('solo')">SOLO</button>
@@ -339,14 +321,12 @@
           <button class="btn-ui" style="padding:4px 0; font-size:10px; background:#475569; color:#fff;" onclick="showMainMenu()">KEMBALI</button>
         </div>
 
-        <!-- PANEL SUB-MENU SETTING -->
         <div id="panel-setting" class="sub-panel">
           <p style="font-size:10px; color:#fff;">Ketik Passcode Admin:</p>
           <input type="text" id="passcode-input" placeholder="Passcode..." oninput="checkOwnerKey(this.value)">
           <button class="btn-ui" style="padding:4px 0; font-size:10px; background:#475569; color:#fff; margin-top:4px;" onclick="showMainMenu()">KEMBALI</button>
         </div>
 
-        <!-- PANEL SUB-MENU LEADERBOARD -->
         <div id="panel-leaderboard" class="sub-panel">
           <div class="mode-tabs">
             <button class="btn-tab active" id="lb-tab-solo" onclick="switchLeaderboardTab('solo')">SOLO</button>
@@ -413,7 +393,6 @@
     let botBaseDamage = 10;
     let healItems = [];
 
-    // NAVIGATION UI CONTROL
     function showMainMenu() {
       document.getElementById('main-menu-view').style.display = 'flex';
       document.getElementById('panel-play').style.display = 'none';
@@ -641,6 +620,7 @@
           const val = snapshot.val();
           p1Name = (val.p1 && val.p1.name) ? val.p1.name : 'P1';
           roomRef.child('p2').set({ name: p2Name, x: 2, z: 0, hp: 100 });
+          alert("Berhasil Join Room! Tunggu Player 1 klik Start.");
           listenToRoom();
         } else {
           alert("Room tidak ditemukan!");
@@ -663,6 +643,7 @@
           otherPlayerMesh.position.z = data[otherRole].z;
         }
 
+        // TRIGGER MULTIPLAYER START BEBAS STUCK
         if (data.status === 'playing' && !isPlaying) {
           startGameLocal();
         } else if (data.status === 'gameover' && isPlaying) {
@@ -911,8 +892,11 @@
       if (gameMode === 'solo') {
         playerRole = 'p1';
         startGameLocal();
-      } else if (playerRole === 'p1' && roomRef) {
-        roomRef.update({ status: 'playing', kills: 0, bots: null, bullets: null });
+      } else if (gameMode === 'coop') {
+        if (!roomRef) return alert("Buat atau join room dulu!");
+        if (playerRole === 'p1') {
+          roomRef.update({ status: 'playing', kills: 0, bots: null, bullets: null });
+        }
       }
     }
 
