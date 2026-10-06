@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>War Thunder 3D - Final Fixed</title>
+  <title>War Thunder 3D - Adaptive Dual Mode</title>
   <style>
     * {
       box-sizing: border-box;
@@ -42,13 +42,14 @@
       z-index: 15;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       background: rgba(15, 23, 42, 0.85);
       border: 1px solid #334155;
-      padding: 6px 16px;
+      padding: 6px 14px;
       border-radius: 20px;
       font-size: 11px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      white-space: nowrap;
     }
 
     #overlay {
@@ -134,17 +135,18 @@
     }
     .btn-tab.active { background: #ef4444; }
 
+    /* JOYSTICK ADAPTIF LAYAR PORTRAIT & LANDSCAPE */
     .joy-container {
       position: absolute;
-      bottom: 45px;
+      bottom: 35px;
       z-index: 20;
     }
-    #left-joy-wrap { left: 35px; }
-    #right-joy-wrap { right: 35px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    #left-joy-wrap { left: 20px; }
+    #right-joy-wrap { right: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
     .joystick-base {
-      width: 90px;
-      height: 90px;
+      width: 85px;
+      height: 85px;
       background: rgba(255, 255, 255, 0.15);
       border-radius: 50%;
       position: relative;
@@ -154,12 +156,12 @@
     #attack-joy { border: 2px solid rgba(239, 68, 68, 0.7); }
 
     .joystick-stick {
-      width: 36px;
-      height: 36px;
+      width: 35px;
+      height: 35px;
       border-radius: 50%;
       position: absolute;
-      top: 27px;
-      left: 27px;
+      top: 25px;
+      left: 25px;
       pointer-events: none;
     }
     #move-stick { background: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.8); }
@@ -169,9 +171,9 @@
       background: #0284c7;
       color: #fff;
       border: 1px solid #38bdf8;
-      padding: 6px 12px;
-      font-size: 10px;
-      border-radius: 20px;
+      padding: 5px 10px;
+      font-size: 9px;
+      border-radius: 16px;
       font-weight: bold;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
@@ -186,9 +188,9 @@
       color: #fff;
       border: 1px solid #818cf8;
       border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      font-size: 18px;
+      width: 34px;
+      height: 34px;
+      font-size: 16px;
       cursor: pointer;
     }
 
@@ -654,9 +656,7 @@
       scene.background = new THREE.Color(0x0f172a);
 
       camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 36, 18);
-      camera.lookAt(0, 0, 0);
-
+      
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -681,13 +681,31 @@
       otherPlayerMesh = createPlayerMesh(0x22c55e);
       scene.add(otherPlayerMesh);
 
+      updateCameraAspect();
       window.addEventListener('resize', onWindowResize);
       animate();
     }
 
-    function onWindowResize() {
+    // FUNGSI ADAPTIF KAMERA BUAT PORTRAIT & LANDSCAPE
+    function updateCameraAspect() {
+      const isPortrait = window.innerHeight > window.innerWidth;
       camera.aspect = window.innerWidth / window.innerHeight;
+      
+      if (isPortrait) {
+        // Pas layar tegak, FOV & jarak kamera dinaikkan biar arena nggak terpotong
+        camera.fov = 70;
+        camera.position.set(0, 48, 22);
+      } else {
+        // Pas layar miring, FOV & posisi balik normal
+        camera.fov = 45;
+        camera.position.set(0, 36, 18);
+      }
+      camera.lookAt(0, 0, 0);
       camera.updateProjectionMatrix();
+    }
+
+    function onWindowResize() {
+      updateCameraAspect();
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
@@ -1010,7 +1028,6 @@
     }
 
     function triggerExplosionAOE(epicenter) {
-      // RADIUS DIBIKIN 4.0 BIAR NGGAK NYAPU SE-MAP
       const AOE_RADIUS = 4.0;
 
       const expGeo = new THREE.SphereGeometry(AOE_RADIUS, 16, 16);
