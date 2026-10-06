@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Floating Admin Panel</title>
+  <title>War Thunder 3D - Clean UI Style</title>
   <style>
     * {
       box-sizing: border-box;
@@ -14,7 +14,7 @@
       touch-action: manipulation;
     }
     body {
-      background: #090d16;
+      background: #000;
       color: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
@@ -25,13 +25,21 @@
       padding: 10px 0;
       overflow: hidden;
     }
-    h1 {
-      margin-bottom: 2px;
-      color: #ef4444;
-      font-size: 20px;
+
+    /* BANNER JUDUL MERAH DARI DESAIN */
+    .title-banner {
+      background: #ef4444;
+      color: #fff;
+      font-weight: 900;
+      font-size: 18px;
+      padding: 8px 24px;
+      border-radius: 12px;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
     }
+
     .score-board {
       font-size: 11px;
       margin-bottom: 6px;
@@ -39,6 +47,7 @@
       text-align: center;
       line-height: 1.4;
     }
+
     #game-container {
       position: relative;
       width: 340px;
@@ -53,86 +62,96 @@
       width: 100%;
       height: 100%;
     }
+
+    /* CONTAINER OVERLAY UTAMA (KAPSUL ABU-ABU) */
     #overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(15, 23, 42, 0.95);
+      background: rgba(0, 0, 0, 0.9);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 10;
-      padding: 15px;
+      padding: 10px;
     }
+
+    .menu-capsule {
+      background: #808080;
+      width: 230px;
+      border-radius: 40px;
+      padding: 18px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+    }
+
+    /* TOMBOL PUTIH BERSIH TUMPUL */
+    .btn-ui {
+      width: 100%;
+      padding: 8px 0;
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: transform 0.1s;
+    }
+    .btn-ui:active {
+      transform: scale(0.95);
+    }
+
+    /* SUBMENU MODAL UI */
+    .sub-panel {
+      display: none;
+      width: 100%;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    input[type="text"] {
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid #000;
+      background: #fff;
+      color: #000;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+      width: 100%;
+      outline: none;
+    }
+
     .mode-tabs {
       display: flex;
-      gap: 6px;
-      margin-bottom: 8px;
-      width: 85%;
+      gap: 4px;
+      width: 100%;
     }
     .btn-tab {
       flex: 1;
-      padding: 6px;
-      font-size: 11px;
+      padding: 5px;
+      font-size: 9px;
       font-weight: bold;
       border-radius: 6px;
-      border: 1px solid #475569;
-      background: #1e293b;
-      color: #94a3b8;
+      border: none;
+      background: #333;
+      color: #fff;
       cursor: pointer;
     }
     .btn-tab.active {
-      background: #22c55e;
-      color: #fff;
-      border-color: #4ade80;
-    }
-    input[type="text"] {
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #475569;
-      background: #1e293b;
-      color: #fff;
-      font-size: 14px;
-      text-align: center;
-      margin-bottom: 6px;
-      width: 85%;
-      outline: none;
-    }
-    .room-group {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 8px;
-      width: 85%;
-    }
-    .btn-room {
-      flex: 1;
-      padding: 8px;
-      font-size: 11px;
-      font-weight: bold;
-      border-radius: 6px;
-      border: 1px solid #38bdf8;
-      background: #0284c7;
-      color: #fff;
-      cursor: pointer;
-    }
-    .btn-room-secondary {
-      background: #334155;
-      border-color: #475569;
-      color: #cbd5e1;
-    }
-    #start-btn {
-      padding: 8px 20px;
-      font-size: 14px;
-      font-weight: bold;
-      color: #fff;
       background: #ef4444;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+      color: #fff;
     }
 
     /* IN-GAME FLOATING ADMIN BUTTON & MODAL */
@@ -150,7 +169,6 @@
       height: 32px;
       font-size: 16px;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
 
     #owner-modal {
@@ -164,25 +182,21 @@
       border-radius: 8px;
       padding: 8px;
       z-index: 25;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.7);
     }
-
     #owner-modal h4 {
       font-size: 10px;
       color: #a5b4fc;
       margin-bottom: 6px;
       text-align: center;
     }
-
     .owner-btns {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 4px;
     }
-
     .btn-owner {
-      padding: 5px 2px;
-      font-size: 9px;
+      padding: 4px 2px;
+      font-size: 8px;
       font-weight: bold;
       background: #4338ca;
       color: #fff;
@@ -191,6 +205,7 @@
       cursor: pointer;
     }
 
+    /* JOYSTICK CONTROLS */
     .controls-wrapper {
       width: 340px;
       display: flex;
@@ -219,8 +234,8 @@
       left: 23px;
       pointer-events: none;
     }
-    #move-stick { background: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.8); }
-    #attack-stick { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); }
+    #move-stick { background: #38bdf8; }
+    #attack-stick { background: #ef4444; }
 
     .weapon-selector {
       display: flex;
@@ -238,26 +253,26 @@
       font-weight: bold;
     }
 
+    /* LEADERBOARD IN-GAME POPUP */
     .leaderboard-box {
-      width: 340px;
-      margin-top: 6px;
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 6px 12px;
-      max-height: 130px;
+      display: none;
+      width: 100%;
+      max-height: 120px;
       overflow-y: auto;
+      background: rgba(0,0,0,0.8);
+      border-radius: 8px;
+      padding: 4px 8px;
+      text-align: left;
     }
     .leaderboard-title {
-      font-size: 11px;
+      font-size: 10px;
       color: #facc15;
       font-weight: bold;
       text-align: center;
       margin-bottom: 2px;
     }
-    ol { padding-left: 20px; font-size: 11px; color: #cbd5e1; }
-    li { margin-bottom: 2px; }
-    .no-data { color: #64748b; font-size: 10px; text-align: center; }
+    ol { padding-left: 18px; font-size: 10px; color: #cbd5e1; }
+    .no-data { color: #64748b; font-size: 9px; text-align: center; }
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -266,7 +281,9 @@
 </head>
 <body>
 
-  <h1>WAR ARENA 3D 💣</h1>
+  <!-- HEADER BENNER MERAH -->
+  <div class="title-banner">WAR THUNDER 3D</div>
+
   <div class="score-board">
     Kill: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | 
     HP: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span> | 
@@ -276,15 +293,13 @@
   </div>
 
   <div id="game-container">
-    <!-- TOMBOL ADMIN IN-GAME -->
     <button id="admin-toggle-btn" onclick="toggleOwnerModal()">⚙️</button>
 
-    <!-- PANEL ADMIN MELAYANG IN-GAME -->
     <div id="owner-modal">
       <h4>⚡ OWNER MENU IN-GAME ⚡</h4>
       <div class="owner-btns">
         <button class="btn-owner" onclick="toggleGodMode()">GOD MODE: OFF</button>
-        <button class="btn-owner" id="sword-btn-owner" onclick="unlockAdminSword()">PEDANG OP: OFF ⚔️️</button>
+        <button class="btn-owner" id="sword-btn-owner" onclick="unlockAdminSword()">PEDANG OP: OFF ⚔</button>
         <button class="btn-owner" onclick="triggerNukeBomb()">NUKE / BOMB 💣</button>
         <button class="btn-owner" onclick="addInstantKills()">+10 KILLS</button>
         <button class="btn-owner" onclick="spawnEnemyWave()">SPAWN WAVE 🌊</button>
@@ -294,25 +309,58 @@
       </div>
     </div>
 
+    <!-- OVERLAY MENU KAPSUL ABU-ABU -->
     <div id="overlay">
-      <div class="mode-tabs">
-        <button id="tab-solo-btn" class="btn-tab" onclick="switchGameMode('solo')">SOLO PLAYER</button>
-        <button id="tab-coop-btn" class="btn-tab active" onclick="switchGameMode('coop')">CO-OP MULTIPLAYER</button>
-      </div>
-
-      <h2 id="msg-title" style="margin-bottom: 4px; color: #ef4444;">CO-OP MULTIPLAYER</h2>
-      <input type="text" id="player-name" placeholder="Masukkan Nickname..." maxlength="12" oninput="checkOwnerKey(this.value)">
-
-      <div id="coop-controls" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-        <div class="room-group">
-          <button class="btn-room" onclick="createRoom()">BUAT ROOM ➕</button>
-          <button class="btn-room btn-room-secondary" onclick="joinRoomPrompt()">JOIN ROOM 🔗</button>
+      <div class="menu-capsule">
+        
+        <!-- MENU UTAMA KAPSUL -->
+        <div id="main-menu-view" style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn-ui" onclick="showSubPanel('play')">PLAY</button>
+          <button class="btn-ui" onclick="showSubPanel('setting')">SETTING</button>
+          <button class="btn-ui" onclick="showSubPanel('leaderboard')">LEADERBOARD</button>
+          <button class="btn-ui" onclick="leaveGame()">LEAVE</button>
         </div>
-        <input type="text" id="room-code-input" placeholder="Kode Room (4 Digit)" maxlength="4" style="display:none;">
-      </div>
 
-      <button id="start-btn" onclick="startGame()" style="display:none;">MULAI CO-OP 🚀</button>
-      <p id="room-info" style="font-size:10px; color:#94a3b8; margin-top:2px;"></p>
+        <!-- PANEL SUB-MENU PLAY -->
+        <div id="panel-play" class="sub-panel">
+          <div class="mode-tabs">
+            <button id="tab-solo-btn" class="btn-tab active" onclick="switchGameMode('solo')">SOLO</button>
+            <button id="tab-coop-btn" class="btn-tab" onclick="switchGameMode('coop')">CO-OP</button>
+          </div>
+          <input type="text" id="player-name" placeholder="Nickname..." maxlength="12">
+          
+          <div id="coop-group" style="display:none; width:100%; gap:4px; margin-top:2px;">
+            <button class="btn-tab" style="background:#0284c7;" onclick="createRoom()">BUAT ROOM</button>
+            <button class="btn-tab" style="background:#334155;" onclick="joinRoomPrompt()">JOIN ROOM</button>
+          </div>
+          <input type="text" id="room-code-input" placeholder="Kode Room (4 Digit)" maxlength="4" style="display:none;">
+
+          <button class="btn-ui" style="background:#22c55e; color:#fff;" onclick="startGame()">START 🚀</button>
+          <button class="btn-ui" style="padding:4px 0; font-size:10px; background:#475569; color:#fff;" onclick="showMainMenu()">KEMBALI</button>
+        </div>
+
+        <!-- PANEL SUB-MENU SETTING -->
+        <div id="panel-setting" class="sub-panel">
+          <p style="font-size:10px; color:#fff;">Ketik Passcode Admin:</p>
+          <input type="text" id="passcode-input" placeholder="Passcode..." oninput="checkOwnerKey(this.value)">
+          <button class="btn-ui" style="padding:4px 0; font-size:10px; background:#475569; color:#fff; margin-top:4px;" onclick="showMainMenu()">KEMBALI</button>
+        </div>
+
+        <!-- PANEL SUB-MENU LEADERBOARD -->
+        <div id="panel-leaderboard" class="sub-panel">
+          <div class="mode-tabs">
+            <button class="btn-tab active" id="lb-tab-solo" onclick="switchLeaderboardTab('solo')">SOLO</button>
+            <button class="btn-tab" id="lb-tab-coop" onclick="switchLeaderboardTab('coop')">CO-OP</button>
+          </div>
+          <div class="leaderboard-box" id="lb-box-container" style="display:block;">
+            <ol id="leaderboard-list">
+              <p class="no-data">Memuat data...</p>
+            </ol>
+          </div>
+          <button class="btn-ui" style="padding:4px 0; font-size:10px; background:#475569; color:#fff;" onclick="showMainMenu()">KEMBALI</button>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -323,19 +371,12 @@
 
     <div class="weapon-selector">
       <button class="btn-weapon" id="weapon-btn" onclick="toggleWeapon()">PISTOL 🔫</button>
-      <span style="font-size:9px; color:#64748b;">Arahkan Joy Merah untuk Serang</span>
+      <span style="font-size:9px; color:#64748b;">Joy Merah = Serang</span>
     </div>
 
     <div id="attack-joy" class="joystick-base">
       <div id="attack-stick" class="joystick-stick"></div>
     </div>
-  </div>
-
-  <div class="leaderboard-box">
-    <div id="lb-title-text" class="leaderboard-title">🏆 TOP TIM CO-OP GLOBAL</div>
-    <ol id="leaderboard-list">
-      <p class="no-data">Memuat leaderboard...</p>
-    </ol>
   </div>
 
   <script>
@@ -354,13 +395,12 @@
     const db = firebase.database();
 
     const OWNER_PASSCODE = "OWNER123";
-    let isOwnerVerified = false;
     let isGodMode = false;
     let isAdminSwordUnlocked = false;
     let isSpeedBoosted = false;
     let playerMoveSpeed = 0.12;
 
-    let gameMode = 'coop';
+    let gameMode = 'solo';
     let roomId = null;
     let playerRole = null;
     let roomRef = null;
@@ -373,10 +413,35 @@
     let botBaseDamage = 10;
     let healItems = [];
 
+    // NAVIGATION UI CONTROL
+    function showMainMenu() {
+      document.getElementById('main-menu-view').style.display = 'flex';
+      document.getElementById('panel-play').style.display = 'none';
+      document.getElementById('panel-setting').style.display = 'none';
+      document.getElementById('panel-leaderboard').style.display = 'none';
+    }
+
+    function showSubPanel(panelName) {
+      document.getElementById('main-menu-view').style.display = 'none';
+      document.getElementById('panel-play').style.display = panelName === 'play' ? 'flex' : 'none';
+      document.getElementById('panel-setting').style.display = panelName === 'setting' ? 'flex' : 'none';
+      document.getElementById('panel-leaderboard').style.display = panelName === 'leaderboard' ? 'flex' : 'none';
+
+      if (panelName === 'leaderboard') {
+        switchLeaderboardTab('solo');
+      }
+    }
+
+    function leaveGame() {
+      if (confirm("Keluar dari game?")) {
+        window.close();
+      }
+    }
+
     function checkOwnerKey(val) {
       if (val.trim().toUpperCase() === OWNER_PASSCODE) {
-        isOwnerVerified = true;
         document.getElementById("admin-toggle-btn").style.display = "block";
+        alert("Passcode Admin Benar! Tombol ⚙️ telah aktif.");
       }
     }
 
@@ -471,38 +536,26 @@
       gameMode = mode;
       const tabSolo = document.getElementById("tab-solo-btn");
       const tabCoop = document.getElementById("tab-coop-btn");
-      const coopControls = document.getElementById("coop-controls");
-      const msgTitle = document.getElementById("msg-title");
-      const startBtn = document.getElementById("start-btn");
-      const roomInfo = document.getElementById("room-info");
-      const lbTitle = document.getElementById("lb-title-text");
-
-      db.ref('leaderboard_solo').off();
-      db.ref('leaderboard_coop').off();
+      const coopGroup = document.getElementById("coop-group");
 
       if (mode === 'solo') {
         tabSolo.classList.add("active");
         tabCoop.classList.remove("active");
-        coopControls.style.display = "none";
-        msgTitle.innerText = "SOLO PLAYER";
-        msgTitle.style.color = "#22c55e";
-        startBtn.innerText = "MAIN SOLO 🚀";
-        startBtn.style.display = "block";
-        roomInfo.innerText = "Mode Solo: Bermain sendiri lawan Bot!";
-        lbTitle.innerText = "🏆 TOP SOLO GLOBAL";
-        loadSoloLeaderboard();
+        coopGroup.style.display = "none";
       } else {
         tabCoop.classList.add("active");
         tabSolo.classList.remove("active");
-        coopControls.style.display = "flex";
-        msgTitle.innerText = "CO-OP MULTIPLAYER";
-        msgTitle.style.color = "#ef4444";
-        startBtn.innerText = "MULAI CO-OP 🚀";
-        startBtn.style.display = roomId ? "block" : "none";
-        roomInfo.innerText = "";
-        lbTitle.innerText = "🏆 TOP TIM CO-OP GLOBAL";
-        loadCoopLeaderboard();
+        coopGroup.style.display = "flex";
       }
+    }
+
+    function switchLeaderboardTab(type) {
+      document.getElementById('lb-tab-solo').classList.toggle('active', type === 'solo');
+      document.getElementById('lb-tab-coop').classList.toggle('active', type === 'coop');
+
+      db.ref(type === 'solo' ? 'leaderboard_solo' : 'leaderboard_coop').orderByChild('kills').on('value', (snapshot) => {
+        renderLeaderboardData(snapshot, type === 'coop');
+      });
     }
 
     function renderLeaderboardData(snapshot, isCoop) {
@@ -526,18 +579,6 @@
         const nameText = isCoop ? (item.team || item.name) : item.name;
         li.innerHTML = `<b>${nameText}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
         list.appendChild(li);
-      });
-    }
-
-    function loadCoopLeaderboard() {
-      db.ref('leaderboard_coop').orderByChild('kills').on('value', (snapshot) => {
-        if (gameMode === 'coop') renderLeaderboardData(snapshot, true);
-      });
-    }
-
-    function loadSoloLeaderboard() {
-      db.ref('leaderboard_solo').orderByChild('kills').on('value', (snapshot) => {
-        if (gameMode === 'solo') renderLeaderboardData(snapshot, false);
       });
     }
 
@@ -567,22 +608,17 @@
     function createRoom() {
       roomId = Math.floor(1000 + Math.random() * 9000).toString();
       playerRole = 'p1';
-      
       let rawName = document.getElementById('player-name').value.trim();
       p1Name = rawName !== "" ? rawName : 'P1';
       
       roomRef = db.ref(`rooms/${roomId}`);
-
       roomRef.set({
         status: 'waiting',
         p1: { name: p1Name, x: -2, z: 0, hp: 100 },
         p2: { name: 'Menunggu...', x: 2, z: 0, hp: 100 },
         kills: 0
       });
-
-      document.getElementById('room-info').innerText = `Kode Room: ${roomId}`;
-      document.getElementById('start-btn').style.display = 'block';
-
+      alert(`Kode Room: ${roomId}`);
       listenToRoom();
     }
 
@@ -592,7 +628,6 @@
         codeInput.style.display = 'block';
         return;
       }
-
       roomId = codeInput.value.trim();
       if (!roomId) return alert("Masukkan kode room!");
 
@@ -601,7 +636,6 @@
       p2Name = rawName !== "" ? rawName : 'P2';
       
       roomRef = db.ref(`rooms/${roomId}`);
-
       roomRef.get().then((snapshot) => {
         if (snapshot.exists()) {
           const val = snapshot.val();
@@ -671,8 +705,6 @@
 
     const container = document.getElementById("game-container");
     const overlay = document.getElementById("overlay");
-    const startBtn = document.getElementById("start-btn");
-    const msgTitle = document.getElementById("msg-title");
     const weaponBtn = document.getElementById("weapon-btn");
 
     let scene, camera, renderer;
@@ -1216,13 +1248,7 @@
 
       syncRealtimeScore();
 
-      if (gameMode === 'solo') {
-        msgTitle.innerText = "KAMU GUGUR!";
-      } else {
-        msgTitle.innerText = "TIM KAMU GUGUR!";
-      }
-
-      startBtn.innerText = "MAIN LAGI 🔄";
+      showMainMenu();
       overlay.style.display = "flex";
       document.getElementById("owner-modal").style.display = "none";
     }
@@ -1233,23 +1259,7 @@
       renderer.render(scene, camera);
     }
 
-    document.getElementById('player-name').addEventListener('keypress', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (gameMode === 'solo') {
-          startGame();
-        } else {
-          if (!roomId) {
-            createRoom();
-          } else {
-            startGame();
-          }
-        }
-      }
-    });
-
     init3D();
-    switchGameMode('coop');
   </script>
 </body>
 </html>
