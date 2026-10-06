@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>War Thunder 3D - Fixed Fullscreen Landscape</title>
+  <title>War Thunder 3D - Fixed Camera & Joystick</title>
   <style>
     * {
       box-sizing: border-box;
@@ -22,7 +22,6 @@
       overflow: hidden;
     }
 
-    /* GAME CONTAINER FULLSCREEN LANDSCAPE */
     #game-container {
       position: relative;
       width: 100vw;
@@ -35,7 +34,6 @@
       height: 100% !important;
     }
 
-    /* HUD INFOBAR ATAS */
     .top-hud {
       position: absolute;
       top: 10px;
@@ -53,7 +51,6 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
-    /* OVERLAY MENU KAPSUL UTAMA */
     #overlay {
       position: absolute;
       top: 0;
@@ -137,25 +134,25 @@
     }
     .btn-tab.active { background: #ef4444; }
 
-    /* JOYSTICK LAYOUT LANDSCAPE */
+    /* POSISI JOYSTICK DINAIKKAN BIAR NGGAK TENGGELEM BANNER / NAV BAR */
     .joy-container {
       position: absolute;
-      bottom: 20px;
+      bottom: 45px;
       z-index: 20;
     }
-    #left-joy-wrap { left: 30px; }
-    #right-joy-wrap { right: 30px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    #left-joy-wrap { left: 35px; }
+    #right-joy-wrap { right: 35px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
     .joystick-base {
       width: 90px;
       height: 90px;
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 50%;
       position: relative;
       touch-action: none;
     }
-    #move-joy { border: 2px solid rgba(56, 189, 248, 0.6); }
-    #attack-joy { border: 2px solid rgba(239, 68, 68, 0.6); }
+    #move-joy { border: 2px solid rgba(56, 189, 248, 0.7); }
+    #attack-joy { border: 2px solid rgba(239, 68, 68, 0.7); }
 
     .joystick-stick {
       width: 36px;
@@ -180,7 +177,6 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
-    /* FLOATING ADMIN MENU */
     #admin-toggle-btn {
       display: none;
       position: absolute;
@@ -660,8 +656,9 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x0f172a);
 
-      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 28, 20);
+      // POSISI KAMERA DITINGGIIN DARI TOP-DOWN VIEW BIAR GA NGGAK TENGGELAM
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 36, 18);
       camera.lookAt(0, 0, 0);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -928,8 +925,6 @@
 
       const now = Date.now();
       let cooldown = 250;
-      
-      // COOLDOWN BAZOKA DIBIKIN 5 DETIK (5000ms)
       if (currentWeapon === "BAZOKA") cooldown = 5000;
       if (currentWeapon === "ADMIN_SWORD") cooldown = 150;
 
