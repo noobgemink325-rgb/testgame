@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Wave & Level Update</title>
+  <title>Bot War Arena 3D - Twin Joystick Fix</title>
   <style>
     * {
       box-sizing: border-box;
@@ -134,9 +134,7 @@
       cursor: pointer;
       box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
     }
-    #start-btn:active { transform: scale(0.95); }
 
-    /* OWNER PANEL */
     #owner-panel {
       display: none;
       width: 85%;
@@ -151,7 +149,6 @@
       font-size: 10px;
       color: #a5b4fc;
       margin-bottom: 4px;
-      letter-spacing: 1px;
     }
     .owner-btns {
       display: grid;
@@ -169,6 +166,7 @@
       cursor: pointer;
     }
 
+    /* TWIN JOYSTICK CONTAINER */
     .controls-wrapper {
       width: 340px;
       display: flex;
@@ -177,60 +175,43 @@
       margin-top: 8px;
       padding: 0 10px;
     }
-    #joystick-container {
-      width: 90px;
-      height: 90px;
+    .joystick-base {
+      width: 85px;
+      height: 85px;
       background: rgba(255, 255, 255, 0.08);
-      border: 2px solid rgba(255, 255, 255, 0.25);
       border-radius: 50%;
       position: relative;
       touch-action: none;
     }
-    #joystick-stick {
-      width: 36px;
-      height: 36px;
-      background: #38bdf8;
+    #move-joy { border: 2px solid rgba(56, 189, 248, 0.5); }
+    #attack-joy { border: 2px solid rgba(239, 68, 68, 0.5); }
+
+    .joystick-stick {
+      width: 35px;
+      height: 35px;
       border-radius: 50%;
       position: absolute;
-      top: 25px;
-      left: 25px;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+      top: 23px;
+      left: 23px;
       pointer-events: none;
     }
-    .action-group {
+    #move-stick { background: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.8); }
+    #attack-stick { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); }
+
+    .weapon-selector {
       display: flex;
       flex-direction: column;
-      gap: 5px;
-    }
-    .btn-shoot {
-      width: 100px;
-      height: 42px;
-      background: #dc2626;
-      border: 2px solid #ef4444;
-      color: white;
-      font-weight: bold;
-      font-size: 13px;
-      border-radius: 8px;
-      touch-action: manipulation;
+      align-items: center;
+      gap: 4px;
     }
     .btn-weapon {
       background: #0284c7;
       color: #fff;
       border: 1px solid #38bdf8;
-      padding: 5px;
-      font-size: 11px;
-      border-radius: 6px;
-      text-align: center;
-      font-weight: bold;
-    }
-    .toggle-auto {
-      background: #334155;
-      color: #cbd5e1;
-      border: 1px solid #475569;
-      padding: 4px;
+      padding: 6px 10px;
       font-size: 10px;
       border-radius: 6px;
-      text-align: center;
+      font-weight: bold;
     }
 
     .leaderboard-box {
@@ -247,7 +228,6 @@
       font-weight: bold;
       text-align: center;
       margin-bottom: 2px;
-      text-transform: uppercase;
     }
     ol { padding-left: 18px; font-size: 11px; color: #cbd5e1; }
     li { margin-bottom: 1px; }
@@ -279,7 +259,6 @@
       <h2 id="msg-title" style="margin-bottom: 4px; color: #ef4444;">CO-OP MULTIPLAYER</h2>
       <input type="text" id="player-name" placeholder="Masukkan Nickname..." maxlength="12" oninput="checkOwnerKey(this.value)">
       
-      <!-- OWNER PANEL -->
       <div id="owner-panel">
         <h4>⚡ OWNER MENU ACTIVATED ⚡</h4>
         <div class="owner-btns">
@@ -304,14 +283,19 @@
   </div>
 
   <div class="controls-wrapper">
-    <div id="joystick-container">
-      <div id="joystick-stick"></div>
+    <!-- JOYSTICK KIRI: MOVEMENT -->
+    <div id="move-joy" class="joystick-base">
+      <div id="move-stick" class="joystick-stick"></div>
     </div>
 
-    <div class="action-group">
-      <button class="btn-weapon" id="weapon-btn" onclick="toggleWeapon()">Senjata: PISTOL 🔫</button>
-      <button class="btn-shoot" id="shoot-btn">TEMBAK 💥</button>
-      <button id="auto-btn" class="toggle-auto" onclick="toggleAutoShoot()">Auto Shoot: OFF</button>
+    <div class="weapon-selector">
+      <button class="btn-weapon" id="weapon-btn" onclick="toggleWeapon()">PISTOL 🔫</button>
+      <span style="font-size:9px; color:#64748b;">Arahkan Joy Merah untuk Serang</span>
+    </div>
+
+    <!-- JOYSTICK KANAN: ATTACK / AIM -->
+    <div id="attack-joy" class="joystick-base">
+      <div id="attack-stick" class="joystick-stick"></div>
     </div>
   </div>
 
@@ -348,8 +332,8 @@
     let roomRef = null;
     let p1Name = "P1", p2Name = "P2";
     let lastHitTime = 0;
+    let currentScoreRef = null;
 
-    // SYSTEM LEVEL & WAVE
     let playerLevel = 1;
     let currentWave = 1;
     let botBaseDamage = 10;
@@ -389,18 +373,14 @@
         btn.innerText = "PEDANG OP: UNLOCKED ⚔️";
         btn.style.background = "#d97706";
         currentWeapon = "ADMIN_SWORD";
-        weaponBtn.innerText = "Senjata: PEDANG OP ⚔️";
+        weaponBtn.innerText = "PEDANG OP ⚔️";
         weaponBtn.style.background = "#b45309";
-        weaponBtn.style.borderColor = "#f59e0b";
-        shootBtn.innerText = "TEBAS ⚔️";
       } else {
         btn.innerText = "PEDANG OP: OFF ⚔️";
         btn.style.background = "#4338ca";
         currentWeapon = "PISTOL";
-        weaponBtn.innerText = "Senjata: PISTOL 🔫";
+        weaponBtn.innerText = "PISTOL 🔫";
         weaponBtn.style.background = "#0284c7";
-        weaponBtn.style.borderColor = "#38bdf8";
-        shootBtn.innerText = "TEMBAK 💥";
       }
     }
 
@@ -410,6 +390,7 @@
       const killsEl = document.getElementById("kills");
       if (killsEl) killsEl.innerText = kills;
       if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+      syncRealtimeScore();
     }
 
     function clearAllBots() {
@@ -465,13 +446,13 @@
       scores.sort((a, b) => b.kills - a.kills);
 
       if (scores.length === 0) {
-        list.innerHTML = `<p class="no-data">Belum ada rekor global. Jadi yang pertama!</p>`;
+        list.innerHTML = `<p class="no-data">Belum ada rekor global.</p>`;
         return;
       }
 
-      scores.forEach((item) => {
+      scores.slice(0, 10).forEach((item) => {
         const li = document.createElement("li");
-        const nameText = isCoop ? item.team : item.name;
+        const nameText = isCoop ? (item.team || item.name) : item.name;
         li.innerHTML = `<b>${nameText}</b>: <span style="color:#22c55e">${item.kills} Kill</span>`;
         list.appendChild(li);
       });
@@ -489,14 +470,22 @@
       });
     }
 
-    function saveCoopScore(teamName, killCount) {
-      if (killCount === 0) return;
-      db.ref('leaderboard_coop').push({ team: teamName, kills: killCount, timestamp: Date.now() });
-    }
+    function syncRealtimeScore() {
+      if (kills <= 0) return;
+      const nameInput = document.getElementById('player-name').value.trim() || 'Player';
 
-    function saveSoloScore(playerName, killCount) {
-      if (killCount === 0) return;
-      db.ref('leaderboard_solo').push({ name: playerName, kills: killCount, timestamp: Date.now() });
+      if (gameMode === 'solo') {
+        if (!currentScoreRef) {
+          currentScoreRef = db.ref('leaderboard_solo').push();
+        }
+        currentScoreRef.set({ name: nameInput, kills: kills, timestamp: Date.now() });
+      } else if (gameMode === 'coop' && playerRole === 'p1') {
+        const teamName = `${p1Name} & ${p2Name}`;
+        if (!currentScoreRef) {
+          currentScoreRef = db.ref('leaderboard_coop').push();
+        }
+        currentScoreRef.set({ team: teamName, kills: kills, timestamp: Date.now() });
+      }
     }
 
     function createRoom() {
@@ -603,15 +592,14 @@
     const overlay = document.getElementById("overlay");
     const startBtn = document.getElementById("start-btn");
     const msgTitle = document.getElementById("msg-title");
-    const autoBtn = document.getElementById("auto-btn");
     const weaponBtn = document.getElementById("weapon-btn");
-    const shootBtn = document.getElementById("shoot-btn");
 
     let scene, camera, renderer;
     let playerMesh, otherPlayerMesh, playerHP = 100, kills = 0, isPlaying = false;
     let bullets = [], botBullets = [], bots = [];
-    let keys = {}, lastMoveDir = { x: 0, z: -1 }, joystickDir = { x: 0, y: 0 };
-    let botSpawner, autoShootInterval, autoShoot = false;
+    let keys = {}, moveJoyDir = { x: 0, y: 0 }, attackJoyDir = { x: 0, y: 0 };
+    let lastAimDir = { x: 0, z: -1 };
+    let botSpawner;
     let currentWeapon = "PISTOL";
     let lastShootTime = 0;
     const ARENA_SIZE = 26;
@@ -677,108 +665,108 @@
       return pGroup;
     }
 
-    // MULTI-TOUCH JOYSTICK LOGIC
-    const joyContainer = document.getElementById("joystick-container");
-    const joyStick = document.getElementById("joystick-stick");
-    const maxRadius = 28;
-    let joystickTouchId = null;
+    // SYSTEM MULTI-TOUCH DUAL JOYSTICK
+    const moveJoyContainer = document.getElementById("move-joy");
+    const moveStick = document.getElementById("move-stick");
+    const attackJoyContainer = document.getElementById("attack-joy");
+    const attackStick = document.getElementById("attack-stick");
+    const maxRadius = 26;
 
-    function processJoyMove(clientX, clientY) {
-      const rect = joyContainer.getBoundingClientRect();
-      let dx = clientX - (rect.left + rect.width / 2);
-      let dy = clientY - (rect.top + rect.height / 2);
-      let distance = Math.hypot(dx, dy);
+    let moveTouchId = null;
+    let attackTouchId = null;
 
-      if (distance > maxRadius) {
-        dx = (dx / distance) * maxRadius;
-        dy = (dy / distance) * maxRadius;
+    function handleJoystickMove(touch, container, stick, dirObj) {
+      const rect = container.getBoundingClientRect();
+      let dx = touch.clientX - (rect.left + rect.width / 2);
+      let dy = touch.clientY - (rect.top + rect.height / 2);
+      let dist = Math.hypot(dx, dy);
+
+      if (dist > maxRadius) {
+        dx = (dx / dist) * maxRadius;
+        dy = (dy / dist) * maxRadius;
       }
 
-      joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
-      joystickDir.x = dx / maxRadius;
-      joystickDir.y = dy / maxRadius;
-
-      if (Math.abs(joystickDir.x) > 0.05 || Math.abs(joystickDir.y) > 0.05) {
-        lastMoveDir = { x: joystickDir.x, z: joystickDir.y };
-      }
-    }
-
-    function resetJoy() {
-      joystickTouchId = null;
-      joyStick.style.transform = "translate(0px, 0px)";
-      joystickDir = { x: 0, y: 0 };
+      stick.style.transform = `translate(${dx}px, ${dy}px)`;
+      dirObj.x = dx / maxRadius;
+      dirObj.y = dy / maxRadius;
     }
 
     window.addEventListener("touchstart", (e) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         let touch = e.changedTouches[i];
-        const rect = joyContainer.getBoundingClientRect();
-        if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-            touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
-          if (joystickTouchId === null) {
-            joystickTouchId = touch.identifier;
-            processJoyMove(touch.clientX, touch.clientY);
+        
+        const mRect = moveJoyContainer.getBoundingClientRect();
+        if (touch.clientX >= mRect.left && touch.clientX <= mRect.right &&
+            touch.clientY >= mRect.top && touch.clientY <= mRect.bottom) {
+          if (moveTouchId === null) {
+            moveTouchId = touch.identifier;
+            handleJoystickMove(touch, moveJoyContainer, moveStick, moveJoyDir);
+          }
+        }
+
+        const aRect = attackJoyContainer.getBoundingClientRect();
+        if (touch.clientX >= aRect.left && touch.clientX <= aRect.right &&
+            touch.clientY >= aRect.top && touch.clientY <= aRect.bottom) {
+          if (attackTouchId === null) {
+            attackTouchId = touch.identifier;
+            handleJoystickMove(touch, attackJoyContainer, attackStick, attackJoyDir);
           }
         }
       }
     }, { passive: false });
 
     window.addEventListener("touchmove", (e) => {
-      if (joystickTouchId !== null) {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-          let touch = e.changedTouches[i];
-          if (touch.identifier === joystickTouchId) processJoyMove(touch.clientX, touch.clientY);
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        let touch = e.changedTouches[i];
+        if (touch.identifier === moveTouchId) {
+          handleJoystickMove(touch, moveJoyContainer, moveStick, moveJoyDir);
+        }
+        if (touch.identifier === attackTouchId) {
+          handleJoystickMove(touch, attackJoyContainer, attackStick, attackJoyDir);
         }
       }
     }, { passive: false });
 
     window.addEventListener("touchend", (e) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === joystickTouchId) resetJoy();
+        let touch = e.changedTouches[i];
+        if (touch.identifier === moveTouchId) {
+          moveTouchId = null;
+          moveStick.style.transform = "translate(0px, 0px)";
+          moveJoyDir = { x: 0, y: 0 };
+        }
+        if (touch.identifier === attackTouchId) {
+          attackTouchId = null;
+          attackStick.style.transform = "translate(0px, 0px)";
+          attackJoyDir = { x: 0, y: 0 };
+        }
       }
-    });
-
-    shootBtn.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      if (isPlaying) playerShoot();
-    });
-    shootBtn.addEventListener("mousedown", () => {
-      if (isPlaying) playerShoot();
     });
 
     window.addEventListener("keydown", (e) => {
       keys[e.key] = true;
-      if (e.code === "Space" && isPlaying) playerShoot();
     });
     window.addEventListener("keyup", (e) => keys[e.key] = false);
 
     function toggleWeapon() {
       if (currentWeapon === "PISTOL") {
         currentWeapon = "BAZOKA";
-        weaponBtn.innerText = "Senjata: BAZOKA 🚀";
+        weaponBtn.innerText = "BAZOKA 🚀";
         weaponBtn.style.background = "#d97706";
-        weaponBtn.style.borderColor = "#f59e0b";
-        shootBtn.innerText = "TEMBAK 💥";
       } else if (currentWeapon === "BAZOKA") {
         if (isAdminSwordUnlocked) {
           currentWeapon = "ADMIN_SWORD";
-          weaponBtn.innerText = "Senjata: PEDANG OP ⚔️";
+          weaponBtn.innerText = "PEDANG OP ⚔️";
           weaponBtn.style.background = "#b45309";
-          weaponBtn.style.borderColor = "#f59e0b";
-          shootBtn.innerText = "TEBAS ⚔️";
         } else {
           currentWeapon = "PISTOL";
-          weaponBtn.innerText = "Senjata: PISTOL 🔫";
+          weaponBtn.innerText = "PISTOL 🔫";
           weaponBtn.style.background = "#0284c7";
-          weaponBtn.style.borderColor = "#38bdf8";
-          shootBtn.innerText = "TEMBAK 💥";
         }
       } else {
         currentWeapon = "PISTOL";
-        weaponBtn.innerText = "Senjata: PISTOL 🔫";
+        weaponBtn.innerText = "PISTOL 🔫";
         weaponBtn.style.background = "#0284c7";
-        weaponBtn.style.borderColor = "#38bdf8";
-        shootBtn.innerText = "TEMBAK 💥";
       }
 
       const sMesh = playerMesh.getObjectByName("admin_sword_mesh");
@@ -789,22 +777,10 @@
       }
     }
 
-    function toggleAutoShoot() {
-      autoShoot = !autoShoot;
-      autoBtn.innerText = autoShoot ? "Auto Shoot: ON 🔥" : "Auto Shoot: OFF";
-      autoBtn.style.background = autoShoot ? "#16a34a" : "#334155";
-
-      if (autoShoot) {
-        autoShootInterval = setInterval(() => { if (isPlaying) playerShoot(); }, 200);
-      } else {
-        clearInterval(autoShootInterval);
-      }
-    }
-
     function checkPlayerLevel() {
       playerLevel = Math.floor(kills / 5) + 1;
       currentWave = Math.floor(kills / 8) + 1;
-      botBaseDamage = 10 + (currentWave - 1) * 2; // Damage bot makin naik tiap wave
+      botBaseDamage = 10 + (currentWave - 1) * 2;
 
       document.getElementById("player-level").innerText = playerLevel;
       document.getElementById("wave-num").innerText = currentWave;
@@ -812,7 +788,7 @@
     }
 
     function spawnHealOrb(x, z) {
-      if (Math.random() < 0.4) { // 40% peluang drop heal
+      if (Math.random() < 0.4) {
         const orbGeo = new THREE.SphereGeometry(0.4, 8, 8);
         const orbMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
         const orb = new THREE.Mesh(orbGeo, orbMat);
@@ -838,6 +814,7 @@
       currentWave = 1;
       botBaseDamage = 10;
       isPlaying = true;
+      currentScoreRef = null;
 
       bullets.forEach(b => scene.remove(b.mesh));
       botBullets.forEach(bb => scene.remove(bb.mesh));
@@ -884,11 +861,10 @@
       mesh.position.set(x, 0.6, z);
       scene.add(mesh);
 
-      // KECUALI MOVEMENT SPEED BOT DIKURANGI DARI 0.08 JADI 0.05
       bots.push({ key: key, mesh: mesh, speed: 0.05 });
     }
 
-    function playerShoot() {
+    function executeAttack(aimDirX, aimDirZ) {
       if (!isPlaying) return;
 
       const now = Date.now();
@@ -904,10 +880,9 @@
         return;
       }
 
-      let mag = Math.hypot(lastMoveDir.x, lastMoveDir.z) || 1;
-      let speedScale = 0.45 + (playerLevel * 0.02); // Kecepatan peluru naik sesuai Level
-      let dx = (lastMoveDir.x / mag) * (currentWeapon === "BAZOKA" ? 0.22 : speedScale);
-      let dz = (lastMoveDir.z / mag) * (currentWeapon === "BAZOKA" ? 0.22 : speedScale);
+      let speedScale = 0.45 + (playerLevel * 0.02);
+      let dx = aimDirX * (currentWeapon === "BAZOKA" ? 0.22 : speedScale);
+      let dz = aimDirZ * (currentWeapon === "BAZOKA" ? 0.22 : speedScale);
 
       const bGeo = new THREE.SphereGeometry(currentWeapon === "BAZOKA" ? 0.5 : 0.25, 8, 8);
       const bMat = new THREE.MeshBasicMaterial({ color: currentWeapon === "BAZOKA" ? 0xf97316 : 0xfacc15 });
@@ -967,6 +942,7 @@
           const killsEl = document.getElementById("kills");
           if (killsEl) killsEl.innerText = kills;
           if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+          syncRealtimeScore();
         }
       }
     }
@@ -1018,6 +994,7 @@
           const killsEl = document.getElementById("kills");
           if (killsEl) killsEl.innerText = kills;
           if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+          syncRealtimeScore();
         }
       }
     }
@@ -1025,8 +1002,9 @@
     function updateGameLogic() {
       if (!isPlaying) return;
 
-      let moveX = joystickDir.x;
-      let moveZ = joystickDir.y;
+      // PERGERAKAN DARI JOYSTICK KIRI / KEYBOARD
+      let moveX = moveJoyDir.x;
+      let moveZ = moveJoyDir.y;
 
       if (keys['ArrowUp'] || keys['w']) moveZ = -1;
       if (keys['ArrowDown'] || keys['s']) moveZ = 1;
@@ -1036,10 +1014,11 @@
       if (moveX !== 0 || moveZ !== 0) {
         playerMesh.position.x += moveX * 0.12;
         playerMesh.position.z += moveZ * 0.12;
-        lastMoveDir = { x: moveX, z: moveZ };
 
-        let angle = Math.atan2(moveX, moveZ);
-        playerMesh.rotation.y = angle + Math.PI;
+        if (Math.abs(attackJoyDir.x) < 0.2 && Math.abs(attackJoyDir.y) < 0.2) {
+          let angle = Math.atan2(moveX, moveZ);
+          playerMesh.rotation.y = angle + Math.PI;
+        }
 
         if (gameMode === 'coop' && roomRef) {
           roomRef.child(playerRole).update({
@@ -1049,17 +1028,29 @@
         }
       }
 
+      // AKSI SERANGAN DARI JOYSTICK KANAN
+      let attackMagnitude = Math.hypot(attackJoyDir.x, attackJoyDir.y);
+      if (attackMagnitude > 0.3) {
+        let normX = attackJoyDir.x / attackMagnitude;
+        let normZ = attackJoyDir.y / attackMagnitude;
+
+        let angle = Math.atan2(normX, normZ);
+        playerMesh.rotation.y = angle + Math.PI;
+
+        executeAttack(normX, normZ);
+      }
+
       const limit = (ARENA_SIZE / 2) - 1;
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
-      // DETEKSI AMBIL ITEM HEAL IJO
+      // HEAL ORB CHECK
       for (let hIdx = healItems.length - 1; hIdx >= 0; hIdx--) {
         let item = healItems[hIdx];
         let dist = playerMesh.position.distanceTo(item.position);
         if (dist < 1.0) {
           if (!isGodMode) {
-            playerHP = Math.min(100, playerHP + 15); // TAMBAH HP +15
+            playerHP = Math.min(100, playerHP + 15);
             const hpEl = document.getElementById("hp");
             if (hpEl) hpEl.innerText = playerHP;
           }
@@ -1068,6 +1059,7 @@
         }
       }
 
+      // PELURU CHECK
       for (let index = bullets.length - 1; index >= 0; index--) {
         let b = bullets[index];
         b.mesh.position.x += b.dx;
@@ -1096,6 +1088,7 @@
               const killsEl = document.getElementById("kills");
               if (killsEl) killsEl.innerText = kills;
               if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+              syncRealtimeScore();
             }
             break;
           }
@@ -1110,6 +1103,7 @@
         }
       }
 
+      // BOT MOVEMENT & DAMAGE
       const now = Date.now();
       bots.forEach((bot) => {
         let distP1 = bot.mesh.position.distanceTo(playerMesh.position);
@@ -1127,7 +1121,7 @@
         if (distP1 < 0.8 && now - lastHitTime > 800) {
           lastHitTime = now;
           if (!isGodMode) {
-            playerHP -= botBaseDamage; // Damage bot ikut skala wave
+            playerHP -= botBaseDamage;
             if (playerHP < 0) playerHP = 0;
             const hpEl = document.getElementById("hp");
             if (hpEl) hpEl.innerText = playerHP;
@@ -1152,13 +1146,11 @@
       isPlaying = false;
       clearInterval(botSpawner);
 
-      const playerName = document.getElementById('player-name').value.trim() || 'Player';
+      syncRealtimeScore();
+
       if (gameMode === 'solo') {
-        saveSoloScore(playerName, kills);
         msgTitle.innerText = "KAMU GUGUR!";
       } else {
-        const teamName = `${p1Name} & ${p2Name}`;
-        if (playerRole === 'p1') saveCoopScore(teamName, kills);
         msgTitle.innerText = "TIM KAMU GUGUR!";
       }
 
@@ -1172,7 +1164,6 @@
       renderer.render(scene, camera);
     }
 
-    // LISTENER ENTER KEYBOARD
     document.getElementById('player-name').addEventListener('keypress', function (e) {
       if (e.key === 'Enter') {
         e.preventDefault();
