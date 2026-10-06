@@ -3,7 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>War Thunder 3D - Adaptive Dual Mode</title>
+  <title>War Thunder 3D - PWA Fullscreen</title>
+
+  <!-- META TAG PWA AGAR BISA DI-INSTALL & FULLSCREEN TANPA BROWSER BAR -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+
   <style>
     * {
       box-sizing: border-box;
@@ -686,17 +693,14 @@
       animate();
     }
 
-    // FUNGSI ADAPTIF KAMERA BUAT PORTRAIT & LANDSCAPE
     function updateCameraAspect() {
       const isPortrait = window.innerHeight > window.innerWidth;
       camera.aspect = window.innerWidth / window.innerHeight;
       
       if (isPortrait) {
-        // Pas layar tegak, FOV & jarak kamera dinaikkan biar arena nggak terpotong
         camera.fov = 70;
         camera.position.set(0, 48, 22);
       } else {
-        // Pas layar miring, FOV & posisi balik normal
         camera.fov = 45;
         camera.position.set(0, 36, 18);
       }
