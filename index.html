@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>War Thunder 3D - Fixed Multiplayer Sync</title>
+  <title>War Thunder 3D - Fixed Fullscreen Landscape</title>
   <style>
     * {
       box-sizing: border-box;
@@ -13,75 +13,79 @@
       -webkit-user-select: none;
       touch-action: manipulation;
     }
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
       background: #000;
       color: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      padding: 10px 0;
       overflow: hidden;
     }
 
-    .title-banner {
-      background: #ef4444;
-      color: #fff;
-      font-weight: 900;
-      font-size: 18px;
-      padding: 8px 24px;
-      border-radius: 12px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 8px;
-      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-    }
-
-    .score-board {
-      font-size: 11px;
-      margin-bottom: 6px;
-      color: #cbd5e1;
-      text-align: center;
-      line-height: 1.4;
-    }
-
+    /* GAME CONTAINER FULLSCREEN LANDSCAPE */
     #game-container {
       position: relative;
-      width: 340px;
-      height: 280px;
-      border: 3px solid #334155;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
+      width: 100vw;
+      height: 100vh;
+      background: #0f172a;
     }
     canvas {
       display: block;
-      width: 100%;
-      height: 100%;
+      width: 100% !important;
+      height: 100% !important;
     }
 
+    /* HUD INFOBAR ATAS */
+    .top-hud {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #334155;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    /* OVERLAY MENU KAPSUL UTAMA */
     #overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.85);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 10;
-      padding: 10px;
+      z-index: 30;
+    }
+
+    .title-banner {
+      background: #ef4444;
+      color: #fff;
+      font-weight: 900;
+      font-size: 16px;
+      padding: 6px 20px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
     }
 
     .menu-capsule {
       background: #808080;
-      width: 230px;
-      border-radius: 40px;
-      padding: 18px 12px;
+      width: 220px;
+      border-radius: 32px;
+      padding: 16px 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -91,22 +95,19 @@
 
     .btn-ui {
       width: 100%;
-      padding: 8px 0;
+      padding: 7px 0;
       background: #ffffff;
       color: #000000;
       border: none;
-      border-radius: 12px;
-      font-size: 13px;
+      border-radius: 10px;
+      font-size: 12px;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 1px;
       cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       transition: transform 0.1s;
     }
-    .btn-ui:active {
-      transform: scale(0.95);
-    }
+    .btn-ui:active { transform: scale(0.95); }
 
     .sub-panel {
       display: none;
@@ -118,144 +119,106 @@
 
     input[type="text"] {
       padding: 6px;
-      border-radius: 8px;
+      border-radius: 6px;
       border: 1px solid #000;
       background: #fff;
       color: #000;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: bold;
       text-align: center;
       width: 100%;
       outline: none;
     }
 
-    .mode-tabs {
-      display: flex;
-      gap: 4px;
-      width: 100%;
-    }
+    .mode-tabs { display: flex; gap: 4px; width: 100%; }
     .btn-tab {
-      flex: 1;
-      padding: 5px;
-      font-size: 9px;
-      font-weight: bold;
-      border-radius: 6px;
-      border: none;
-      background: #333;
-      color: #fff;
-      cursor: pointer;
+      flex: 1; padding: 5px; font-size: 9px; font-weight: bold;
+      border-radius: 6px; border: none; background: #333; color: #fff; cursor: pointer;
     }
-    .btn-tab.active {
-      background: #ef4444;
+    .btn-tab.active { background: #ef4444; }
+
+    /* JOYSTICK LAYOUT LANDSCAPE */
+    .joy-container {
+      position: absolute;
+      bottom: 20px;
+      z-index: 20;
+    }
+    #left-joy-wrap { left: 30px; }
+    #right-joy-wrap { right: 30px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+    .joystick-base {
+      width: 90px;
+      height: 90px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 50%;
+      position: relative;
+      touch-action: none;
+    }
+    #move-joy { border: 2px solid rgba(56, 189, 248, 0.6); }
+    #attack-joy { border: 2px solid rgba(239, 68, 68, 0.6); }
+
+    .joystick-stick {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      position: absolute;
+      top: 27px;
+      left: 27px;
+      pointer-events: none;
+    }
+    #move-stick { background: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.8); }
+    #attack-stick { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); }
+
+    .btn-weapon {
+      background: #0284c7;
       color: #fff;
+      border: 1px solid #38bdf8;
+      padding: 6px 12px;
+      font-size: 10px;
+      border-radius: 20px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
 
+    /* FLOATING ADMIN MENU */
     #admin-toggle-btn {
       display: none;
       position: absolute;
-      top: 8px;
-      right: 8px;
-      z-index: 20;
+      top: 10px;
+      right: 15px;
+      z-index: 25;
       background: #6366f1;
       color: #fff;
       border: 1px solid #818cf8;
       border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      font-size: 16px;
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
       cursor: pointer;
     }
 
     #owner-modal {
       display: none;
       position: absolute;
-      top: 35px;
-      right: 8px;
+      top: 50px;
+      right: 15px;
       width: 220px;
       background: rgba(30, 27, 75, 0.95);
       border: 2px solid #6366f1;
       border-radius: 8px;
       padding: 8px;
-      z-index: 25;
+      z-index: 26;
     }
-    #owner-modal h4 {
-      font-size: 10px;
-      color: #a5b4fc;
-      margin-bottom: 6px;
-      text-align: center;
-    }
-    .owner-btns {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px;
-    }
+    #owner-modal h4 { font-size: 10px; color: #a5b4fc; margin-bottom: 6px; text-align: center; }
+    .owner-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
     .btn-owner {
-      padding: 4px 2px;
-      font-size: 8px;
-      font-weight: bold;
-      background: #4338ca;
-      color: #fff;
-      border: 1px solid #818cf8;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .controls-wrapper {
-      width: 340px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 8px;
-      padding: 0 10px;
-    }
-    .joystick-base {
-      width: 85px;
-      height: 85px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 50%;
-      position: relative;
-      touch-action: none;
-    }
-    #move-joy { border: 2px solid rgba(56, 189, 248, 0.5); }
-    #attack-joy { border: 2px solid rgba(239, 68, 68, 0.5); }
-
-    .joystick-stick {
-      width: 35px;
-      height: 35px;
-      border-radius: 50%;
-      position: absolute;
-      top: 23px;
-      left: 23px;
-      pointer-events: none;
-    }
-    #move-stick { background: #38bdf8; }
-    #attack-stick { background: #ef4444; }
-
-    .weapon-selector {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-    .btn-weapon {
-      background: #0284c7;
-      color: #fff;
-      border: 1px solid #38bdf8;
-      padding: 6px 10px;
-      font-size: 10px;
-      border-radius: 6px;
-      font-weight: bold;
+      padding: 5px 2px; font-size: 8px; font-weight: bold;
+      background: #4338ca; color: #fff; border: 1px solid #818cf8; border-radius: 4px; cursor: pointer;
     }
 
     .leaderboard-box {
-      display: none;
-      width: 100%;
-      max-height: 120px;
-      overflow-y: auto;
-      background: rgba(0,0,0,0.8);
-      border-radius: 8px;
-      padding: 4px 8px;
-      text-align: left;
+      display: none; width: 100%; max-height: 110px; overflow-y: auto;
+      background: rgba(0,0,0,0.8); border-radius: 8px; padding: 4px 8px; text-align: left;
     }
     ol { padding-left: 18px; font-size: 10px; color: #cbd5e1; }
     .no-data { color: #64748b; font-size: 9px; text-align: center; }
@@ -267,17 +230,15 @@
 </head>
 <body>
 
-  <div class="title-banner">WAR THUNDER 3D</div>
-
-  <div class="score-board">
-    Kill: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | 
-    HP: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span> | 
-    Lvl: <span id="player-level" style="color:#38bdf8; font-weight:bold;">1</span><br>
-    Wave: <span id="wave-num" style="color:#facc15; font-weight:bold;">1</span> | 
-    Dmg Bot: <span id="bot-dmg" style="color:#f43f5e; font-weight:bold;">10</span>
-  </div>
-
   <div id="game-container">
+    
+    <div class="top-hud">
+      <div>Kill: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span></div>
+      <div>HP: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span></div>
+      <div>Lvl: <span id="player-level" style="color:#38bdf8; font-weight:bold;">1</span></div>
+      <div>Wave: <span id="wave-num" style="color:#facc15; font-weight:bold;">1</span></div>
+    </div>
+
     <button id="admin-toggle-btn" onclick="toggleOwnerModal()">⚙️</button>
 
     <div id="owner-modal">
@@ -294,7 +255,21 @@
       </div>
     </div>
 
+    <div id="left-joy-wrap" class="joy-container">
+      <div id="move-joy" class="joystick-base">
+        <div id="move-stick" class="joystick-stick"></div>
+      </div>
+    </div>
+
+    <div id="right-joy-wrap" class="joy-container">
+      <button class="btn-weapon" id="weapon-btn" onclick="toggleWeapon()">PISTOL 🔫</button>
+      <div id="attack-joy" class="joystick-base">
+        <div id="attack-stick" class="joystick-stick"></div>
+      </div>
+    </div>
+
     <div id="overlay">
+      <div class="title-banner">WAR THUNDER 3D</div>
       <div class="menu-capsule">
         
         <div id="main-menu-view" style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
@@ -341,21 +316,6 @@
         </div>
 
       </div>
-    </div>
-  </div>
-
-  <div class="controls-wrapper">
-    <div id="move-joy" class="joystick-base">
-      <div id="move-stick" class="joystick-stick"></div>
-    </div>
-
-    <div class="weapon-selector">
-      <button class="btn-weapon" id="weapon-btn" onclick="toggleWeapon()">PISTOL 🔫</button>
-      <span style="font-size:9px; color:#64748b;">Joy Merah = Serang</span>
-    </div>
-
-    <div id="attack-joy" class="joystick-base">
-      <div id="attack-stick" class="joystick-stick"></div>
     </div>
   </div>
 
@@ -643,7 +603,6 @@
           otherPlayerMesh.position.z = data[otherRole].z;
         }
 
-        // TRIGGER MULTIPLAYER START BEBAS STUCK
         if (data.status === 'playing' && !isPlaying) {
           startGameLocal();
         } else if (data.status === 'gameover' && isPlaying) {
@@ -695,18 +654,19 @@
     let botSpawner;
     let currentWeapon = "PISTOL";
     let lastShootTime = 0;
-    const ARENA_SIZE = 26;
+    const ARENA_SIZE = 30;
 
     function init3D() {
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x0f172a);
 
-      camera = new THREE.PerspectiveCamera(45, 340 / 280, 0.1, 1000);
-      camera.position.set(0, 32, 22);
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 28, 20);
       camera.lookAt(0, 0, 0);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(340, 280);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
       container.appendChild(renderer.domElement);
 
@@ -728,7 +688,14 @@
       otherPlayerMesh = createPlayerMesh(0x22c55e);
       scene.add(otherPlayerMesh);
 
+      window.addEventListener('resize', onWindowResize);
       animate();
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
     function createPlayerMesh(colorHex) {
@@ -762,7 +729,7 @@
     const moveStick = document.getElementById("move-stick");
     const attackJoyContainer = document.getElementById("attack-joy");
     const attackStick = document.getElementById("attack-stick");
-    const maxRadius = 26;
+    const maxRadius = 30;
 
     let moveTouchId = null;
     let attackTouchId = null;
@@ -874,7 +841,6 @@
 
       document.getElementById("player-level").innerText = playerLevel;
       document.getElementById("wave-num").innerText = currentWave;
-      document.getElementById("bot-dmg").innerText = botBaseDamage;
     }
 
     function spawnHealOrb(x, z) {
@@ -962,7 +928,9 @@
 
       const now = Date.now();
       let cooldown = 250;
-      if (currentWeapon === "BAZOKA") cooldown = 1000;
+      
+      // COOLDOWN BAZOKA DIBIKIN 5 DETIK (5000ms)
+      if (currentWeapon === "BAZOKA") cooldown = 5000;
       if (currentWeapon === "ADMIN_SWORD") cooldown = 150;
 
       if (now - lastShootTime < cooldown) return;
