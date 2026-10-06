@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Fixed Enter Key</title>
+  <title>Bot War Arena 3D - Wave & Level Update</title>
   <style>
     * {
       box-sizing: border-box;
@@ -33,9 +33,11 @@
       letter-spacing: 2px;
     }
     .score-board {
-      font-size: 13px;
+      font-size: 11px;
       margin-bottom: 6px;
       color: #cbd5e1;
+      text-align: center;
+      line-height: 1.4;
     }
     #game-container {
       position: relative;
@@ -260,9 +262,11 @@
 
   <h1>WAR ARENA 3D 💣</h1>
   <div class="score-board">
-    Kill Tim: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | 
-    HP Kamu: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span> | 
-    Room: <span id="room-display" style="color:#facc15; font-weight:bold;">-</span>
+    Kill: <span id="kills" style="color:#22c55e; font-weight:bold;">0</span> | 
+    HP: <span id="hp" style="color:#ef4444; font-weight:bold;">100</span> | 
+    Lvl: <span id="player-level" style="color:#38bdf8; font-weight:bold;">1</span><br>
+    Wave: <span id="wave-num" style="color:#facc15; font-weight:bold;">1</span> | 
+    Dmg Bot: <span id="bot-dmg" style="color:#f43f5e; font-weight:bold;">10</span>
   </div>
 
   <div id="game-container">
@@ -345,6 +349,12 @@
     let p1Name = "P1", p2Name = "P2";
     let lastHitTime = 0;
 
+    // SYSTEM LEVEL & WAVE
+    let playerLevel = 1;
+    let currentWave = 1;
+    let botBaseDamage = 10;
+    let healItems = [];
+
     function checkOwnerKey(val) {
       const ownerPanel = document.getElementById("owner-panel");
       if (val.trim().toUpperCase() === OWNER_PASSCODE) {
@@ -396,6 +406,7 @@
 
     function addInstantKills() {
       kills += 10;
+      checkPlayerLevel();
       const killsEl = document.getElementById("kills");
       if (killsEl) killsEl.innerText = kills;
       if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
@@ -416,7 +427,6 @@
       const startBtn = document.getElementById("start-btn");
       const roomInfo = document.getElementById("room-info");
       const lbTitle = document.getElementById("lb-title-text");
-      const killTextEl = document.querySelector(".score-board");
 
       db.ref('leaderboard_solo').off();
       db.ref('leaderboard_coop').off();
@@ -431,8 +441,6 @@
         startBtn.style.display = "block";
         roomInfo.innerText = "Mode Solo: Bermain sendiri lawan Bot!";
         lbTitle.innerText = "🏆 TOP SOLO GLOBAL";
-
-        killTextEl.innerHTML = `Kill Kamu: <span id="kills" style="color:#22c55e; font-weight:bold;">${kills}</span> | HP Kamu: <span id="hp" style="color:#ef4444; font-weight:bold;">${playerHP}</span> | Mode: <span style="color:#22c55e; font-weight:bold;">SOLO</span>`;
         loadSoloLeaderboard();
       } else {
         tabCoop.classList.add("active");
@@ -444,8 +452,6 @@
         startBtn.style.display = roomId ? "block" : "none";
         roomInfo.innerText = "";
         lbTitle.innerText = "🏆 TOP TIM CO-OP GLOBAL";
-
-        killTextEl.innerHTML = `Kill Tim: <span id="kills" style="color:#22c55e; font-weight:bold;">${kills}</span> | HP Kamu: <span id="hp" style="color:#ef4444; font-weight:bold;">${playerHP}</span> | Room: <span id="room-display" style="color:#facc15; font-weight:bold;">${roomId || '-'}</span>`;
         loadCoopLeaderboard();
       }
     }
@@ -506,8 +512,6 @@
         kills: 0
       });
 
-      const rd = document.getElementById('room-display');
-      if (rd) rd.innerText = roomId;
       document.getElementById('room-info').innerText = `Kode Room: ${roomId}`;
       document.getElementById('start-btn').style.display = 'block';
 
@@ -532,8 +536,6 @@
         if (snapshot.exists()) {
           p1Name = snapshot.val().p1.name;
           roomRef.child('p2').set({ name: p2Name, x: 2, z: 0, hp: 100 });
-          const rd = document.getElementById('room-display');
-          if (rd) rd.innerText = roomId;
           listenToRoom();
         } else {
           alert("Room tidak ditemukan!");
@@ -564,6 +566,7 @@
 
         if (data.kills !== undefined) {
           kills = data.kills;
+          checkPlayerLevel();
           const killsEl = document.getElementById("kills");
           if (killsEl) killsEl.innerText = kills;
         }
@@ -759,10 +762,10 @@
       } else if (currentWeapon === "BAZOKA") {
         if (isAdminSwordUnlocked) {
           currentWeapon = "ADMIN_SWORD";
-          weaponBtn.innerText = "Senjata: PEDANG OP ⚔️️";
+          weaponBtn.innerText = "Senjata: PEDANG OP ⚔️";
           weaponBtn.style.background = "#b45309";
           weaponBtn.style.borderColor = "#f59e0b";
-          shootBtn.innerText = "TEBAS ⚔️️";
+          shootBtn.innerText = "TEBAS ⚔️";
         } else {
           currentWeapon = "PISTOL";
           weaponBtn.innerText = "Senjata: PISTOL 🔫";
@@ -798,11 +801,30 @@
       }
     }
 
+    function checkPlayerLevel() {
+      playerLevel = Math.floor(kills / 5) + 1;
+      currentWave = Math.floor(kills / 8) + 1;
+      botBaseDamage = 10 + (currentWave - 1) * 2; // Damage bot makin naik tiap wave
+
+      document.getElementById("player-level").innerText = playerLevel;
+      document.getElementById("wave-num").innerText = currentWave;
+      document.getElementById("bot-dmg").innerText = botBaseDamage;
+    }
+
+    function spawnHealOrb(x, z) {
+      if (Math.random() < 0.4) { // 40% peluang drop heal
+        const orbGeo = new THREE.SphereGeometry(0.4, 8, 8);
+        const orbMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+        const orb = new THREE.Mesh(orbGeo, orbMat);
+        orb.position.set(x, 0.4, z);
+        scene.add(orb);
+        healItems.push(orb);
+      }
+    }
+
     function startGame() {
       if (gameMode === 'solo') {
         playerRole = 'p1';
-        const rd = document.getElementById('room-display');
-        if (rd) rd.innerText = 'SOLO';
         startGameLocal();
       } else if (playerRole === 'p1' && roomRef) {
         roomRef.update({ status: 'playing', kills: 0, bots: null, bullets: null });
@@ -812,16 +834,21 @@
     function startGameLocal() {
       playerHP = isGodMode ? 9999 : 100;
       kills = 0;
+      playerLevel = 1;
+      currentWave = 1;
+      botBaseDamage = 10;
       isPlaying = true;
 
       bullets.forEach(b => scene.remove(b.mesh));
       botBullets.forEach(bb => scene.remove(bb.mesh));
       bots.forEach(bot => scene.remove(bot.mesh));
-      bullets = []; botBullets = []; bots = [];
+      healItems.forEach(h => scene.remove(h));
+      bullets = []; botBullets = []; bots = []; healItems = [];
 
       playerMesh.position.set(playerRole === 'p1' ? -2 : 2, 0.6, 0);
       otherPlayerMesh.visible = (gameMode !== 'solo');
 
+      checkPlayerLevel();
       const killsEl = document.getElementById("kills");
       const hpEl = document.getElementById("hp");
       if (killsEl) killsEl.innerText = kills;
@@ -830,7 +857,8 @@
 
       if (botSpawner) clearInterval(botSpawner);
       if (gameMode === 'solo' || playerRole === 'p1') {
-        botSpawner = setInterval(spawnBotHost, 1500);
+        let intervalTime = Math.max(500, 1500 - (currentWave * 100));
+        botSpawner = setInterval(spawnBotHost, intervalTime);
       }
     }
 
@@ -856,7 +884,8 @@
       mesh.position.set(x, 0.6, z);
       scene.add(mesh);
 
-      bots.push({ key: key, mesh: mesh, speed: 0.08 });
+      // KECUALI MOVEMENT SPEED BOT DIKURANGI DARI 0.08 JADI 0.05
+      bots.push({ key: key, mesh: mesh, speed: 0.05 });
     }
 
     function playerShoot() {
@@ -876,8 +905,9 @@
       }
 
       let mag = Math.hypot(lastMoveDir.x, lastMoveDir.z) || 1;
-      let dx = (lastMoveDir.x / mag) * (currentWeapon === "BAZOKA" ? 0.22 : 0.45);
-      let dz = (lastMoveDir.z / mag) * (currentWeapon === "BAZOKA" ? 0.22 : 0.45);
+      let speedScale = 0.45 + (playerLevel * 0.02); // Kecepatan peluru naik sesuai Level
+      let dx = (lastMoveDir.x / mag) * (currentWeapon === "BAZOKA" ? 0.22 : speedScale);
+      let dz = (lastMoveDir.z / mag) * (currentWeapon === "BAZOKA" ? 0.22 : speedScale);
 
       const bGeo = new THREE.SphereGeometry(currentWeapon === "BAZOKA" ? 0.5 : 0.25, 8, 8);
       const bMat = new THREE.MeshBasicMaterial({ color: currentWeapon === "BAZOKA" ? 0xf97316 : 0xfacc15 });
@@ -925,6 +955,7 @@
         let distance = playerMesh.position.distanceTo(bot.mesh.position);
 
         if (distance <= SWORD_SLASH_RADIUS) {
+          spawnHealOrb(bot.mesh.position.x, bot.mesh.position.z);
           if (gameMode === 'solo') {
             scene.remove(bot.mesh);
             bots.splice(i, 1);
@@ -932,6 +963,7 @@
             roomRef.child(`bots/${bot.key}`).remove();
           }
           kills++;
+          checkPlayerLevel();
           const killsEl = document.getElementById("kills");
           if (killsEl) killsEl.innerText = kills;
           if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
@@ -950,7 +982,7 @@
     }
 
     function triggerExplosionAOE(epicenter) {
-      const AOE_RADIUS = 4.5;
+      const AOE_RADIUS = 4.5 + (playerLevel * 0.1);
 
       const expGeo = new THREE.SphereGeometry(AOE_RADIUS, 16, 16);
       const expMat = new THREE.MeshBasicMaterial({ color: 0xff4500, transparent: true, opacity: 0.6 });
@@ -974,6 +1006,7 @@
         let distance = epicenter.distanceTo(bot.mesh.position);
 
         if (distance <= AOE_RADIUS) {
+          spawnHealOrb(bot.mesh.position.x, bot.mesh.position.z);
           if (gameMode === 'solo') {
             scene.remove(bot.mesh);
             bots.splice(i, 1);
@@ -981,6 +1014,7 @@
             roomRef.child(`bots/${bot.key}`).remove();
           }
           kills++;
+          checkPlayerLevel();
           const killsEl = document.getElementById("kills");
           if (killsEl) killsEl.innerText = kills;
           if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
@@ -1019,6 +1053,21 @@
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
+      // DETEKSI AMBIL ITEM HEAL IJO
+      for (let hIdx = healItems.length - 1; hIdx >= 0; hIdx--) {
+        let item = healItems[hIdx];
+        let dist = playerMesh.position.distanceTo(item.position);
+        if (dist < 1.0) {
+          if (!isGodMode) {
+            playerHP = Math.min(100, playerHP + 15); // TAMBAH HP +15
+            const hpEl = document.getElementById("hp");
+            if (hpEl) hpEl.innerText = playerHP;
+          }
+          scene.remove(item);
+          healItems.splice(hIdx, 1);
+        }
+      }
+
       for (let index = bullets.length - 1; index >= 0; index--) {
         let b = bullets[index];
         b.mesh.position.x += b.dx;
@@ -1035,6 +1084,7 @@
             if (b.type === "BAZOKA") {
               triggerExplosionAOE(b.mesh.position.clone());
             } else {
+              spawnHealOrb(bot.mesh.position.x, bot.mesh.position.z);
               if (gameMode === 'solo') {
                 scene.remove(bot.mesh);
                 bots.splice(bIdx, 1);
@@ -1042,6 +1092,7 @@
                 roomRef.child(`bots/${bot.key}`).remove();
               }
               kills++;
+              checkPlayerLevel();
               const killsEl = document.getElementById("kills");
               if (killsEl) killsEl.innerText = kills;
               if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
@@ -1076,7 +1127,7 @@
         if (distP1 < 0.8 && now - lastHitTime > 800) {
           lastHitTime = now;
           if (!isGodMode) {
-            playerHP -= 20;
+            playerHP -= botBaseDamage; // Damage bot ikut skala wave
             if (playerHP < 0) playerHP = 0;
             const hpEl = document.getElementById("hp");
             if (hpEl) hpEl.innerText = playerHP;
