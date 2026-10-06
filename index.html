@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Twin Joystick & Leaderboard Fix</title>
+  <title>Bot War Arena 3D - Fixed Co-Op Leaderboard</title>
   <style>
     * {
       box-sizing: border-box;
@@ -166,7 +166,6 @@
       cursor: pointer;
     }
 
-    /* TWIN JOYSTICK CONTAINER */
     .controls-wrapper {
       width: 340px;
       display: flex;
@@ -283,7 +282,6 @@
   </div>
 
   <div class="controls-wrapper">
-    <!-- JOYSTICK KIRI: MOVEMENT -->
     <div id="move-joy" class="joystick-base">
       <div id="move-stick" class="joystick-stick"></div>
     </div>
@@ -293,7 +291,6 @@
       <span style="font-size:9px; color:#64748b;">Arahkan Joy Merah untuk Serang</span>
     </div>
 
-    <!-- JOYSTICK KANAN: ATTACK / AIM -->
     <div id="attack-joy" class="joystick-base">
       <div id="attack-stick" class="joystick-stick"></div>
     </div>
@@ -307,7 +304,6 @@
   </div>
 
   <script>
-    // --- FIREBASE CONFIG & INTEGRASI ---
     const firebaseConfig = {
       apiKey: "AIzaSyBOo74lEYtQGFC5_1NeDLPi0DuG2QhAK3g",
       authDomain: "bot-war-arena.firebaseapp.com",
@@ -470,7 +466,7 @@
       });
     }
 
-    // FIX VALIDASI NAMA KOSONG DI LEADERBOARD
+    // FIX SYNC NAMA CO-OP TIM UTUH (P1 & P2)
     function syncRealtimeScore() {
       if (kills <= 0) return;
       let rawName = document.getElementById('player-name').value.trim();
@@ -481,14 +477,17 @@
           currentScoreRef = db.ref('leaderboard_solo').push();
         }
         currentScoreRef.set({ name: validName, kills: kills, timestamp: Date.now() });
-      } else if (gameMode === 'coop' && playerRole === 'p1') {
-        let validP1 = (p1Name && p1Name !== "") ? p1Name : "P1";
-        let validP2 = (p2Name && p2Name !== "" && p2Name !== "Menunggu...") ? p2Name : "P2";
+      } else if (gameMode === 'coop') {
+        let validP1 = (p1Name && p1Name !== "" && p1Name !== "P1") ? p1Name : "P1";
+        let validP2 = (p2Name && p2Name !== "" && p2Name !== "P2" && p2Name !== "Menunggu...") ? p2Name : "P2";
         let teamName = `${validP1} & ${validP2}`;
-        if (!currentScoreRef) {
-          currentScoreRef = db.ref('leaderboard_coop').push();
-        }
-        currentScoreRef.set({ team: teamName, kills: kills, timestamp: Date.now() });
+
+        // Menggunakan ID Room sebagai key unik agar P1 dan P2 tidak menimpa record berbeda
+        db.ref(`leaderboard_coop/${roomId || 'coop_room'}`).set({ 
+          team: teamName, 
+          kills: kills, 
+          timestamp: Date.now() 
+        });
       }
     }
 
@@ -532,7 +531,8 @@
 
       roomRef.get().then((snapshot) => {
         if (snapshot.exists()) {
-          p1Name = snapshot.val().p1.name || 'P1';
+          const val = snapshot.val();
+          p1Name = (val.p1 && val.p1.name) ? val.p1.name : 'P1';
           roomRef.child('p2').set({ name: p2Name, x: 2, z: 0, hp: 100 });
           listenToRoom();
         } else {
@@ -547,8 +547,8 @@
         const data = snapshot.val();
         if (!data || gameMode === 'solo') return;
 
-        if (data.p1) p1Name = data.p1.name;
-        if (data.p2) p2Name = data.p2.name;
+        if (data.p1 && data.p1.name) p1Name = data.p1.name;
+        if (data.p2 && data.p2.name && data.p2.name !== 'Menunggu...') p2Name = data.p2.name;
 
         const otherRole = playerRole === 'p1' ? 'p2' : 'p1';
         if (data[otherRole] && otherPlayerMesh) {
@@ -596,7 +596,6 @@
       });
     }
 
-    // --- GAME ENGINE 3D ---
     const container = document.getElementById("game-container");
     const overlay = document.getElementById("overlay");
     const startBtn = document.getElementById("start-btn");
@@ -673,7 +672,6 @@
       return pGroup;
     }
 
-    // MULTI-TOUCH DUAL JOYSTICK LOGIC
     const moveJoyContainer = document.getElementById("move-joy");
     const moveStick = document.getElementById("move-stick");
     const attackJoyContainer = document.getElementById("attack-joy");
