@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Bot War Arena 3D - Fixed Co-Op Leaderboard</title>
+  <title>Bot War Arena 3D - Fixed Leaderboard Top 10</title>
   <style>
     * {
       box-sizing: border-box;
@@ -220,6 +220,8 @@
       border: 1px solid #334155;
       border-radius: 8px;
       padding: 6px 12px;
+      max-height: 130px;
+      overflow-y: auto;
     }
     .leaderboard-title {
       font-size: 11px;
@@ -228,8 +230,8 @@
       text-align: center;
       margin-bottom: 2px;
     }
-    ol { padding-left: 18px; font-size: 11px; color: #cbd5e1; }
-    li { margin-bottom: 1px; }
+    ol { padding-left: 20px; font-size: 11px; color: #cbd5e1; }
+    li { margin-bottom: 2px; }
     .no-data { color: #64748b; font-size: 10px; text-align: center; }
   </style>
 
@@ -438,7 +440,11 @@
       list.innerHTML = "";
       let scores = [];
 
-      snapshot.forEach((child) => scores.push(child.val()));
+      snapshot.forEach((child) => {
+        scores.push(child.val());
+      });
+
+      // Urutkan terbesar ke terkecil
       scores.sort((a, b) => b.kills - a.kills);
 
       if (scores.length === 0) {
@@ -446,6 +452,7 @@
         return;
       }
 
+      // Ambil seluruh Top 10 lengkap
       scores.slice(0, 10).forEach((item) => {
         const li = document.createElement("li");
         const nameText = isCoop ? (item.team || item.name) : item.name;
@@ -455,18 +462,17 @@
     }
 
     function loadCoopLeaderboard() {
-      db.ref('leaderboard_coop').orderByChild('kills').limitToLast(10).on('value', (snapshot) => {
+      db.ref('leaderboard_coop').orderByChild('kills').on('value', (snapshot) => {
         if (gameMode === 'coop') renderLeaderboardData(snapshot, true);
       });
     }
 
     function loadSoloLeaderboard() {
-      db.ref('leaderboard_solo').orderByChild('kills').limitToLast(10).on('value', (snapshot) => {
+      db.ref('leaderboard_solo').orderByChild('kills').on('value', (snapshot) => {
         if (gameMode === 'solo') renderLeaderboardData(snapshot, false);
       });
     }
 
-    // FIX SYNC NAMA CO-OP TIM UTUH (P1 & P2)
     function syncRealtimeScore() {
       if (kills <= 0) return;
       let rawName = document.getElementById('player-name').value.trim();
@@ -482,7 +488,6 @@
         let validP2 = (p2Name && p2Name !== "" && p2Name !== "P2" && p2Name !== "Menunggu...") ? p2Name : "P2";
         let teamName = `${validP1} & ${validP2}`;
 
-        // Menggunakan ID Room sebagai key unik agar P1 dan P2 tidak menimpa record berbeda
         db.ref(`leaderboard_coop/${roomId || 'coop_room'}`).set({ 
           team: teamName, 
           kills: kills, 
@@ -1179,7 +1184,7 @@
     });
 
     init3D();
-    loadCoopLeaderboard();
+    switchGameMode('coop');
   </script>
 </body>
 </html>
