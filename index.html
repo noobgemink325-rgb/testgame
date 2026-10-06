@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
   <title>War Thunder 3D - PWA Fullscreen</title>
 
-  <!-- META TAG PWA AGAR BISA DI-INSTALL & FULLSCREEN TANPA BROWSER BAR -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
@@ -142,7 +141,6 @@
     }
     .btn-tab.active { background: #ef4444; }
 
-    /* JOYSTICK ADAPTIF LAYAR PORTRAIT & LANDSCAPE */
     .joy-container {
       position: absolute;
       bottom: 35px;
@@ -354,6 +352,7 @@
     let currentWave = 1;
     let botBaseDamage = 10;
     let healItems = [];
+    let activeUndeads = []; // Array untuk menyimpan summon Undead Besar
 
     function showMainMenu() {
       document.getElementById('main-menu-view').style.display = 'flex';
@@ -430,7 +429,7 @@
         btn.innerText = "PEDANG OP: UNLOCKED ⚔️";
         btn.style.background = "#d97706";
         currentWeapon = "ADMIN_SWORD";
-        weaponBtn.innerText = "PEDANG OP ⚔️";
+        weaponBtn.innerText = "SUMMON UNDEAD 💀";
         weaponBtn.style.background = "#b45309";
       } else {
         btn.innerText = "PEDANG OP: OFF ⚔️";
@@ -451,7 +450,7 @@
     }
 
     function triggerNukeBomb() {
-      triggerExplosionAOE(new THREE.Vector3(0, 0, 0));
+      triggerExplosionAOE(new THREE.Vector3(0, 0, 0), 12.0);
     }
 
     function spawnEnemyWave() {
@@ -828,7 +827,7 @@
       } else if (currentWeapon === "BAZOKA") {
         if (isAdminSwordUnlocked) {
           currentWeapon = "ADMIN_SWORD";
-          weaponBtn.innerText = "PEDANG OP ⚔️";
+          weaponBtn.innerText = "SUMMON UNDEAD 💀";
           weaponBtn.style.background = "#b45309";
         } else {
           currentWeapon = "PISTOL";
@@ -894,7 +893,8 @@
       botBullets.forEach(bb => scene.remove(bb.mesh));
       bots.forEach(bot => scene.remove(bot.mesh));
       healItems.forEach(h => scene.remove(h));
-      bullets = []; botBullets = []; bots = []; healItems = [];
+      activeUndeads.forEach(u => scene.remove(u.mesh));
+      bullets = []; botBullets = []; bots = []; healItems = []; activeUndeads = [];
 
       playerMesh.position.set(playerRole === 'p1' ? -2 : 2, 0.6, 0);
       otherPlayerMesh.visible = (gameMode !== 'solo');
@@ -943,23 +943,23 @@
 
       const now = Date.now();
       let cooldown = 250;
-      if (currentWeapon === "BAZOKA") cooldown = 5000;
-      if (currentWeapon === "ADMIN_SWORD") cooldown = 150;
+      if (currentWeapon === "BAZOKA") cooldown = 800; // Bazoka bisa ditembakkan lebih cepat & kuat
+      if (currentWeapon === "ADMIN_SWORD") cooldown = 1500;
 
       if (now - lastShootTime < cooldown) return;
       lastShootTime = now;
 
       if (currentWeapon === "ADMIN_SWORD") {
-        triggerAdminSwordSlash();
+        spawnGiantUndead();
         return;
       }
 
-      let speedScale = 0.45 + (playerLevel * 0.02);
-      let dx = aimDirX * (currentWeapon === "BAZOKA" ? 0.22 : speedScale);
-      let dz = aimDirZ * (currentWeapon === "BAZOKA" ? 0.22 : speedScale);
+      let speedScale = 0.5 + (playerLevel * 0.02);
+      let dx = aimDirX * (currentWeapon === "BAZOKA" ? 0.35 : speedScale);
+      let dz = aimDirZ * (currentWeapon === "BAZOKA" ? 0.35 : speedScale);
 
-      const bGeo = new THREE.SphereGeometry(currentWeapon === "BAZOKA" ? 0.5 : 0.25, 8, 8);
-      const bMat = new THREE.MeshBasicMaterial({ color: currentWeapon === "BAZOKA" ? 0xf97316 : 0xfacc15 });
+      const bGeo = new THREE.SphereGeometry(currentWeapon === "BAZOKA" ? 0.8 : 0.25, 8, 8);
+      const bMat = new THREE.MeshBasicMaterial({ color: currentWeapon === "BAZOKA" ? 0xff4500 : 0xfacc15 });
       const mesh = new THREE.Mesh(bGeo, bMat);
       mesh.position.set(playerMesh.position.x, 0.6, playerMesh.position.z);
       scene.add(mesh);
@@ -978,51 +978,28 @@
       }
     }
 
-    function triggerAdminSwordSlash() {
-      const SWORD_SLASH_RADIUS = 6.0;
+    function spawnGiantUndead() {
+      // Membuat Undead Besar (Raksasa Bayangan Pelindung)
+      const uGeo = new THREE.BoxGeometry(2.5, 4.0, 2.5);
+      const uMat = new THREE.MeshPhongMaterial({ color: 0x4c1d95, emissive: 0x2e1065 });
+      const uMesh = new THREE.Mesh(uGeo, uMat);
+      
+      // Spawn di depan player
+      uMesh.position.set(
+        playerMesh.position.x + (Math.sin(playerMesh.rotation.y) * 2),
+        1.5,
+        playerMesh.position.z + (Math.cos(playerMesh.rotation.y) * 2)
+      );
+      scene.add(uMesh);
 
-      const ringGeo = new THREE.RingGeometry(0.2, 0.8, 32);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0xfbcfe8, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
-      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-      ringMesh.rotation.x = Math.PI / 2;
-      ringMesh.position.set(playerMesh.position.x, 0.4, playerMesh.position.z);
-      scene.add(ringMesh);
-
-      let scale = 1;
-      const ringInterval = setInterval(() => {
-        scale += 1.2;
-        ringMesh.scale.set(scale, scale, scale);
-        ringMat.opacity -= 0.15;
-        if (ringMat.opacity <= 0) {
-          clearInterval(ringInterval);
-          scene.remove(ringMesh);
-        }
-      }, 20);
-
-      for (let i = bots.length - 1; i >= 0; i--) {
-        let bot = bots[i];
-        let distance = playerMesh.position.distanceTo(bot.mesh.position);
-
-        if (distance <= SWORD_SLASH_RADIUS) {
-          spawnHealOrb(bot.mesh.position.x, bot.mesh.position.z);
-          if (gameMode === 'solo') {
-            scene.remove(bot.mesh);
-            bots.splice(i, 1);
-          } else if (playerRole === 'p1' && roomRef) {
-            roomRef.child(`bots/${bot.key}`).remove();
-          }
-          kills++;
-          checkPlayerLevel();
-          const killsEl = document.getElementById("kills");
-          if (killsEl) killsEl.innerText = kills;
-          if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
-          syncRealtimeScore();
-        }
-      }
+      activeUndeads.push({
+        mesh: uMesh,
+        lifeTimer: 300 // Bertahan selama 300 frame (sekitar 5-6 detik)
+      });
     }
 
     function spawnRemoteBullet(b) {
-      const bGeo = new THREE.SphereGeometry(b.type === "BAZOKA" ? 0.5 : 0.25, 8, 8);
+      const bGeo = new THREE.SphereGeometry(b.type === "BAZOKA" ? 0.8 : 0.25, 8, 8);
       const bMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
       const mesh = new THREE.Mesh(bGeo, bMat);
       mesh.position.set(b.x, 0.6, b.z);
@@ -1031,25 +1008,25 @@
       bullets.push({ mesh: mesh, dx: b.dx, dz: b.dz, type: b.type });
     }
 
-    function triggerExplosionAOE(epicenter) {
-      const AOE_RADIUS = 4.0;
+    function triggerExplosionAOE(epicenter, radius = 6.5) {
+      const AOE_RADIUS = radius;
 
       const expGeo = new THREE.SphereGeometry(AOE_RADIUS, 16, 16);
-      const expMat = new THREE.MeshBasicMaterial({ color: 0xff4500, transparent: true, opacity: 0.6 });
+      const expMat = new THREE.MeshBasicMaterial({ color: 0xff4500, transparent: true, opacity: 0.7 });
       const expMesh = new THREE.Mesh(expGeo, expMat);
       expMesh.position.copy(epicenter);
       scene.add(expMesh);
 
       let scale = 0.2;
       const expInterval = setInterval(() => {
-        scale += 0.2;
+        scale += 0.3;
         expMesh.scale.set(scale, scale, scale);
-        expMat.opacity -= 0.1;
+        expMat.opacity -= 0.12;
         if (expMat.opacity <= 0) {
           clearInterval(expInterval);
           scene.remove(expMesh);
         }
-      }, 30);
+      }, 25);
 
       for (let i = bots.length - 1; i >= 0; i--) {
         let bot = bots[i];
@@ -1115,6 +1092,37 @@
       playerMesh.position.x = Math.max(-limit, Math.min(limit, playerMesh.position.x));
       playerMesh.position.z = Math.max(-limit, Math.min(limit, playerMesh.position.z));
 
+      // Update Undead Besar (Menghancurkan musuh terdekat secara otomatis)
+      for (let uIdx = activeUndeads.length - 1; uIdx >= 0; uIdx--) {
+        let undead = activeUndeads[uIdx];
+        undead.lifeTimer--;
+
+        // Undead menyerang musuh terdekat di sekitarnya
+        for (let bIdx = bots.length - 1; bIdx >= 0; bIdx--) {
+          let bot = bots[bIdx];
+          if (undead.mesh.position.distanceTo(bot.mesh.position) < 3.5) {
+            spawnHealOrb(bot.mesh.position.x, bot.mesh.position.z);
+            if (gameMode === 'solo') {
+              scene.remove(bot.mesh);
+              bots.splice(bIdx, 1);
+            } else if (playerRole === 'p1' && roomRef) {
+              roomRef.child(`bots/${bot.key}`).remove();
+            }
+            kills++;
+            checkPlayerLevel();
+            const killsEl = document.getElementById("kills");
+            if (killsEl) killsEl.innerText = kills;
+            if (gameMode === 'coop' && roomRef) roomRef.update({ kills: kills });
+            syncRealtimeScore();
+          }
+        }
+
+        if (undead.lifeTimer <= 0) {
+          scene.remove(undead.mesh);
+          activeUndeads.splice(uIdx, 1);
+        }
+      }
+
       for (let hIdx = healItems.length - 1; hIdx >= 0; hIdx--) {
         let item = healItems[hIdx];
         let dist = playerMesh.position.distanceTo(item.position);
@@ -1140,10 +1148,10 @@
           let bot = bots[bIdx];
           let dist = b.mesh.position.distanceTo(bot.mesh.position);
 
-          if (dist < 0.9) {
+          if (dist < (b.type === "BAZOKA" ? 1.5 : 0.9)) {
             hitHappened = true;
             if (b.type === "BAZOKA") {
-              triggerExplosionAOE(b.mesh.position.clone());
+              triggerExplosionAOE(b.mesh.position.clone(), 7.0); // Area ledakan bazoka diperbesar & diperkuat
             } else {
               spawnHealOrb(bot.mesh.position.x, bot.mesh.position.z);
               if (gameMode === 'solo') {
@@ -1165,7 +1173,7 @@
 
         if (hitHappened || Math.abs(b.mesh.position.x) > limit || Math.abs(b.mesh.position.z) > limit) {
           if (!hitHappened && b.type === "BAZOKA") {
-            triggerExplosionAOE(b.mesh.position.clone());
+            triggerExplosionAOE(b.mesh.position.clone(), 7.0);
           }
           scene.remove(b.mesh);
           bullets.splice(index, 1);
